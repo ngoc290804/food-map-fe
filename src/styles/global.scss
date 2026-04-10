@@ -399,11 +399,16 @@ body {
   margin-bottom: 0;
 }
 
+.restaurant-management__menu-error {
+  display: block;
+  margin-top: 0.75rem;
+}
+
 .restaurant-management__footer {
   border-top: 1px solid var(--app-border);
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: 1.25rem;
   padding-top: 1rem;
 }
@@ -415,6 +420,34 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 1rem;
+  position: relative;
+}
+
+.auth-layout__brand {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--app-text-strong);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.75rem;
+  left: 2rem;
+  padding: 0;
+  position: absolute;
+  top: 1.5rem;
+}
+
+.auth-layout__brand-logo {
+  border-radius: 8px;
+  display: block;
+  height: 60px;
+  object-fit: cover;
+  width: 60px;
+}
+
+.auth-layout__brand-name {
+  font-size: 1.35rem;
+  font-weight: 800;
 }
 
 .auth-layout__panel {
@@ -505,6 +538,21 @@ body {
 }
 
 @media (max-width: 480px) {
+  .auth-layout {
+    align-items: stretch;
+    padding-top: 6rem;
+  }
+
+  .auth-layout__brand {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  .auth-layout__brand-logo {
+    height: 48px;
+    width: 48px;
+  }
+
   .offer-list {
     grid-template-columns: minmax(0, 1fr);
   }

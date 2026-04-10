@@ -177,6 +177,7 @@ function QuanLyCuaHangPage() {
   const [isCreatingRestaurant, setIsCreatingRestaurant] = useState(false)
   const [menuModalOpen, setMenuModalOpen] = useState(false)
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null)
+  const [menuListError, setMenuListError] = useState(false)
   const selectedCategory = Form.useWatch('category', restaurantForm) ?? selectedRestaurant.category
   const detailOptions = getCategoryDetailOptions(selectedCategory)
 
@@ -278,6 +279,7 @@ function QuanLyCuaHangPage() {
   ]
 
   const selectRestaurant = (record: RestaurantManageItem) => {
+    setMenuListError(false)
     setSelectedRestaurant({
       ...record,
       menuItems: [...record.menuItems],
@@ -286,6 +288,7 @@ function QuanLyCuaHangPage() {
   }
 
   const openCreateRestaurantForm = () => {
+    setMenuListError(false)
     setSelectedRestaurant(createEmptyRestaurant())
     setIsCreatingRestaurant(true)
   }
@@ -325,6 +328,7 @@ function QuanLyCuaHangPage() {
 
     setMenuModalOpen(false)
     setEditingMenuId(null)
+    setMenuListError(false)
     menuForm.resetFields()
   }
 
@@ -337,6 +341,12 @@ function QuanLyCuaHangPage() {
 
   const saveRestaurant = async () => {
     const values = await restaurantForm.validateFields()
+
+    if (isCreatingRestaurant && selectedRestaurant.menuItems.length === 0) {
+      setMenuListError(true)
+      return
+    }
+
     const nextRestaurant: RestaurantManageItem = {
       ...selectedRestaurant,
       name: values.name,
@@ -490,7 +500,7 @@ function QuanLyCuaHangPage() {
 
             <Flex align="center" className="restaurant-management__menu-toolbar" justify="space-between">
               <Typography.Title level={4}>Menu quán</Typography.Title>
-              <Button type = "primary" icon={<PlusOutlined />} onClick={openCreateMenuModal}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreateMenuModal}>
                 Thêm món ăn
               </Button>
             </Flex>
@@ -502,6 +512,11 @@ function QuanLyCuaHangPage() {
               scroll={{ x: 720 }}
               size="small"
             />
+            {menuListError ? (
+              <Typography.Text className="restaurant-management__menu-error" type="danger">
+                Vui lòng thêm ít nhất 1 món ăn trước khi lưu quán mới.
+              </Typography.Text>
+            ) : null}
 
             <div className="restaurant-management__footer">
               <Button type="primary" onClick={saveRestaurant}>
