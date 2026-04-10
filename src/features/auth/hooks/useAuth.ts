@@ -7,6 +7,7 @@ import { saveAccessToken } from '@/utils/token'
 
 type LoginFormValues = {
   email?: string
+  nickname?: string
 }
 
 export function useAuth() {
@@ -17,7 +18,7 @@ export function useAuth() {
     const email = values?.email || 'admin@foodmap.local'
     const nextUser = {
       id: 'u-01',
-      name: email.split('@')[0] || 'Nguyen Van A',
+      name: values?.nickname?.trim() || email.split('@')[0] || 'Nguyen Van A',
       email,
     }
 
