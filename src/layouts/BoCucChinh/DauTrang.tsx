@@ -5,6 +5,8 @@ import { Button, Dropdown, Flex, Menu, Space } from 'antd'
 import type { MenuProps } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
 
+import logoImage from '@/assets/logo.png'
+import { env } from '@/config/env'
 import {
   AREA_QUERY_KEY,
   areaOptions,
@@ -63,8 +65,50 @@ function DauTrang() {
   }
 
   return (
-    <Flex align="center" className="main-layout__topbar" gap={24} justify="space-between" wrap="wrap">
-      <Flex align="center" className="main-layout__nav-area" gap={16} wrap="wrap">
+    <div className="main-layout__topbar">
+      <Flex align="center" className="main-layout__brand-row" justify="space-between" wrap="wrap">
+        <button
+          aria-label="Về trang chủ"
+          className="main-layout__brand"
+          type="button"
+          onClick={() => navigate('/')}
+        >
+          <img alt={env.APP_NAME} className="main-layout__brand-logo" src={logoImage} />
+          <span className="main-layout__brand-name">{env.APP_NAME}</span>
+        </button>
+
+        <Flex align="center" className="main-layout__actions" gap={12}>
+          {user ? (
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'profile', label: 'Thông tin tài khoản' },
+                  { key: 'logout', label: 'Đăng xuất', danger: true },
+                ],
+                onClick: handleAccountClick,
+              }}
+              trigger={['hover', 'click']}
+            >
+              <Button className="main-layout__login-button" icon={<UserOutlined />} size="large">
+                <Space>
+                  {user.name}
+                  <DownOutlined />
+                </Space>
+              </Button>
+            </Dropdown>
+          ) : (
+            <Button
+              className="main-layout__login-button"
+              size="large"
+              onClick={() => navigate('/login')}
+            >
+              Đăng nhập
+            </Button>
+          )}
+        </Flex>
+      </Flex>
+
+      <Flex align="center" className="main-layout__menu-row" gap={16} wrap="wrap">
         <Dropdown
           menu={{
             items: areaMenuItems,
@@ -93,37 +137,7 @@ function DauTrang() {
           />
         </nav>
       </Flex>
-
-      <Flex align="center" className="main-layout__actions" gap={12}>
-        {user ? (
-          <Dropdown
-            menu={{
-              items: [
-                { key: 'profile', label: 'Thông tin tài khoản' },
-                { key: 'logout', label: 'Đăng xuất', danger: true },
-              ],
-              onClick: handleAccountClick,
-            }}
-            trigger={['hover', 'click']}
-          >
-            <Button className="main-layout__login-button" icon={<UserOutlined />} size="large">
-              <Space>
-                {user.name}
-                <DownOutlined />
-              </Space>
-            </Button>
-          </Dropdown>
-        ) : (
-          <Button
-            className="main-layout__login-button"
-            size="large"
-            onClick={() => navigate('/login')}
-          >
-            Đăng nhập
-          </Button>
-        )}
-      </Flex>
-    </Flex>
+    </div>
   )
 }
 
