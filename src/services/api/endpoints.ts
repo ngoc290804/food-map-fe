@@ -1,6 +1,6 @@
 export const endpoints = {
   auth: '/auth',
   restaurants: '/restaurants',
-  menus: '/menus',
+  menus: '/menu-items',
   chatbot: '/chatbot',
 } as const

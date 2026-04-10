@@ -1,17 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { restaurantService } from "@/features/restaurant/services/restaurant.service";
-
-type RestaurantListParams = {
-  keyword?: string;
-};
+import {
+  restaurantService,
+  type RestaurantListParams,
+} from "@/features/restaurant/services/restaurant.service";
 
 export function useRestaurantList(params?: RestaurantListParams) {
   const normalizedKeyword = params?.keyword?.trim().toLowerCase();
 
   return useQuery({
-    queryKey: ["restaurants"],
-    queryFn: () => restaurantService.getList(),
+    queryKey: [
+      "restaurants",
+      normalizedKeyword,
+      params?.category,
+      params?.detail,
+      params?.area,
+    ],
+    queryFn: () =>
+      restaurantService.getList({
+        ...params,
+        keyword: normalizedKeyword,
+      }),
     select: (data) => {
       const items = normalizedKeyword
         ? data.items.filter(

@@ -7,48 +7,38 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { Button, Flex, Input, Space, Typography } from "antd";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import TheTrangThai from "@/components/common/TheTrangThai";
+import {
+  AREA_QUERY_KEY,
+  FOOD_DETAIL_QUERY_KEY,
+  getAreaByValue,
+  getFoodDetailByValue,
+  getFoodFilterByPath,
+} from "@/config/food-filter.config";
 import { useRestaurantList } from "@/features/restaurant/hooks/useRestaurantList";
-
-const pageMeta: Record<string, { title: string; description: string }> = {
-  "/do-an": {
-    title: "Ưu đãi",
-    description: "Khám phá ưu đãi nổi bật quanh bạn.",
-  },
-  "/thuc-pham": {
-    title: "Thực phẩm",
-    description: "Danh sách cửa hàng thực phẩm đang có deal tốt.",
-  },
-  "/ruou-bia": {
-    title: "Rượu bia",
-    description: "Ưu đãi từ các cửa hàng đồ uống và bia rượu.",
-  },
-  "/hoa": {
-    title: "Hoa",
-    description: "Tiệm hoa đang có khuyến mãi theo dịp.",
-  },
-  "/sieu-thi": {
-    title: "Siêu thị",
-    description: "Mua sắm siêu thị với mức giá hấp dẫn.",
-  },
-  "/thuoc": {
-    title: "Thuốc",
-    description: "Nhà thuốc giao nhanh và ưu đãi theo đơn.",
-  },
-  "/thu-cung": {
-    title: "Thú cưng",
-    description: "Sản phẩm và dịch vụ cho thú cưng.",
-  },
-};
 
 function CuaHangListPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState("");
-  const { data, isLoading } = useRestaurantList({ keyword });
-  const currentPage = pageMeta[location.pathname] ?? pageMeta["/do-an"];
+  const currentCategory = getFoodFilterByPath(location.pathname);
+  const currentDetail = getFoodDetailByValue(
+    searchParams.get(FOOD_DETAIL_QUERY_KEY),
+  );
+  const currentArea = getAreaByValue(searchParams.get(AREA_QUERY_KEY));
+  const { data, isLoading } = useRestaurantList({
+    keyword,
+    category: currentCategory.value,
+    detail: currentDetail?.value,
+    area: currentArea.value,
+  });
+  const pageTitle = currentDetail?.label ?? currentCategory.label;
+  const pageDescription = currentDetail
+    ? `${currentCategory.label} - ${currentDetail.label} tại ${currentArea.label}.`
+    : `${currentCategory.description} Khu vực: ${currentArea.label}.`;
   const items = data?.items ?? [];
 
   return (
@@ -56,11 +46,9 @@ function CuaHangListPage() {
       <Flex align="center" justify="space-between" wrap="wrap">
         <div>
           <Typography.Title level={2} style={{ marginBottom: 6 }}>
-            {currentPage.title}
+            {pageTitle}
           </Typography.Title>
-          <Typography.Text type="secondary">
-            {currentPage.description}
-          </Typography.Text>
+          <Typography.Text type="secondary">{pageDescription}</Typography.Text>
         </div>
         <Button className="offer-section__view-all" type="link">
           Xem tất cả <RightOutlined />

@@ -5,15 +5,20 @@ import { useAuthStore } from '@/features/auth/store/auth.store'
 import { storage } from '@/utils/storage'
 import { saveAccessToken } from '@/utils/token'
 
+type LoginFormValues = {
+  email?: string
+}
+
 export function useAuth() {
   const navigate = useNavigate()
   const { user, setUser, logout } = useAuthStore()
 
-  const signIn = () => {
+  const signIn = (values?: LoginFormValues) => {
+    const email = values?.email || 'admin@foodmap.local'
     const nextUser = {
       id: 'u-01',
-      name: 'Nguyen Van A',
-      email: 'admin@foodmap.local',
+      name: email.split('@')[0] || 'Nguyen Van A',
+      email,
     }
 
     saveAccessToken('demo-access-token')
@@ -24,7 +29,7 @@ export function useAuth() {
 
   const signOut = () => {
     logout()
-    navigate('/login', { replace: true })
+    navigate('/', { replace: true })
   }
 
   return {

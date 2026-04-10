@@ -1,29 +1,81 @@
-import { DownOutlined, SearchOutlined } from '@ant-design/icons'
+import { useCallback, useMemo } from 'react'
+
+import { DownOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Flex, Menu, Space } from 'antd'
+import type { MenuProps } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-import { appMenuItems } from '@/config/menu.config'
+import {
+  AREA_QUERY_KEY,
+  areaOptions,
+  FOOD_DETAIL_QUERY_KEY,
+  getAreaByValue,
+  getFoodDetailByValue,
+} from '@/config/food-filter.config'
+import { createAppMenuItems } from '@/config/menu.config'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 function DauTrang() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, signOut } = useAuth()
+
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const selectedArea = getAreaByValue(searchParams.get(AREA_QUERY_KEY))
+  const selectedDetail = getFoodDetailByValue(searchParams.get(FOOD_DETAIL_QUERY_KEY))
+  const selectedMenuKey = selectedDetail
+    ? `${location.pathname}?${FOOD_DETAIL_QUERY_KEY}=${selectedDetail.value}`
+    : location.pathname
+
+  const goToMenuFilter = useCallback(
+    (key: string) => {
+      const [pathname, rawSearch = ''] = key.split('?')
+      const nextParams = new URLSearchParams(rawSearch)
+      nextParams.set(AREA_QUERY_KEY, selectedArea.value)
+      const query = nextParams.toString()
+
+      navigate(`${pathname}${query ? `?${query}` : ''}`)
+    },
+    [navigate, selectedArea.value],
+  )
+
+  const menuItems = useMemo(() => createAppMenuItems(goToMenuFilter), [goToMenuFilter])
+  const areaMenuItems = useMemo(
+    () => areaOptions.map((option) => ({ key: option.value, label: option.label })),
+    [],
+  )
+
+  const handleAreaClick: MenuProps['onClick'] = ({ key }) => {
+    const nextParams = new URLSearchParams(location.search)
+    nextParams.set(AREA_QUERY_KEY, String(key))
+    navigate(`${location.pathname}?${nextParams.toString()}`)
+  }
+
+  const handleAccountClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'profile') {
+      navigate('/profile')
+      return
+    }
+
+    if (key === 'logout') {
+      signOut()
+    }
+  }
 
   return (
     <Flex align="center" className="main-layout__topbar" gap={24} justify="space-between" wrap="wrap">
       <Flex align="center" className="main-layout__nav-area" gap={16} wrap="wrap">
         <Dropdown
           menu={{
-            items: [
-              { key: 'hn', label: 'Hà Nội' },
-              { key: 'hcm', label: 'Hồ Chí Minh' },
-              { key: 'dn', label: 'Đà Nẵng' },
-            ],
+            items: areaMenuItems,
+            selectedKeys: [selectedArea.value],
+            onClick: handleAreaClick,
           }}
           trigger={['click']}
         >
           <Button className="main-layout__city-button" size="large">
             <Space>
-              Hà Nội
+              {selectedArea.label}
               <DownOutlined />
             </Space>
           </Button>
@@ -33,19 +85,43 @@ function DauTrang() {
           <Menu
             className="main-layout__menu"
             disabledOverflow
-            items={appMenuItems}
+            items={menuItems}
             mode="horizontal"
-            selectedKeys={[location.pathname]}
-            onClick={({ key }) => navigate(key)}
+            selectedKeys={[selectedMenuKey]}
+            triggerSubMenuAction="hover"
+            onClick={({ key }) => goToMenuFilter(String(key))}
           />
         </nav>
       </Flex>
 
       <Flex align="center" className="main-layout__actions" gap={12}>
-        <Button className="main-layout__icon-button" icon={<SearchOutlined />} />
-        <Button className="main-layout__login-button" size="large">
-          Đăng nhập
-        </Button>
+        {user ? (
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'profile', label: 'Thông tin tài khoản' },
+                { key: 'logout', label: 'Đăng xuất', danger: true },
+              ],
+              onClick: handleAccountClick,
+            }}
+            trigger={['hover', 'click']}
+          >
+            <Button className="main-layout__login-button" icon={<UserOutlined />} size="large">
+              <Space>
+                {user.name}
+                <DownOutlined />
+              </Space>
+            </Button>
+          </Dropdown>
+        ) : (
+          <Button
+            className="main-layout__login-button"
+            size="large"
+            onClick={() => navigate('/login')}
+          >
+            Đăng nhập
+          </Button>
+        )}
       </Flex>
     </Flex>
   )

@@ -13,19 +13,27 @@ function DangNhapFormPage() {
         <div>
           <Typography.Title level={2}>{env.APP_NAME}</Typography.Title>
           <Typography.Text type="secondary">
-            Base code đồ án với React, TypeScript, Ant Design và router config-driven.
+            Đăng nhập để lưu quán yêu thích và xem lại thông tin tài khoản.
           </Typography.Text>
         </div>
 
         <Form layout="vertical" onFinish={signIn}>
-          <Form.Item label="Email" name="email">
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ required: true, message: 'Vui lòng nhập email' }]}
+          >
             <Input prefix={<UserOutlined />} placeholder="admin@foodmap.local" />
           </Form.Item>
-          <Form.Item label="Mật khẩu" name="password">
+          <Form.Item
+            label="Mật khẩu"
+            name="password"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+          >
             <Input.Password prefix={<LockOutlined />} placeholder="Nhập mật khẩu" />
           </Form.Item>
           <Button block htmlType="submit" size="large" type="primary">
-            Đăng nhập demo
+            Đăng nhập
           </Button>
         </Form>
       </Space>

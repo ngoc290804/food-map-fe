@@ -7,10 +7,7 @@ function TaiKhoanDetailPage() {
   const user = useAuthStore((state) => state.user)
 
   return (
-    <KhungTrang
-      subtitle="Thông tin người dùng lấy từ Zustand store."
-      title="Tài khoản"
-    >
+    <KhungTrang subtitle="Thông tin tài khoản đang đăng nhập." title="Tài khoản">
       <Card>
         <Descriptions
           column={1}

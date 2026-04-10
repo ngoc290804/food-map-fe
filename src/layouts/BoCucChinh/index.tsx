@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react'
 
 import { Layout } from 'antd'
 
+import FloatingChatbot from '@/features/chatbot/components/FloatingChatbot'
 import NoiDungChinh from '@/layouts/BoCucChinh/NoiDungChinh'
 import DauTrang from '@/layouts/BoCucChinh/DauTrang'
 
@@ -14,6 +15,7 @@ function BoCucChinh({ children }: PropsWithChildren) {
       <Layout.Content className="main-layout__content">
         <NoiDungChinh>{children}</NoiDungChinh>
       </Layout.Content>
+      <FloatingChatbot />
     </Layout>
   )
 }

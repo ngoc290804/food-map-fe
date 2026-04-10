@@ -9,7 +9,7 @@ function AntdProvider({ children }: PropsWithChildren) {
         algorithm: theme.defaultAlgorithm,
         token: {
           colorPrimary: '#d97706',
-          borderRadius: 14,
+          borderRadius: 8,
           fontFamily: '"Segoe UI", sans-serif',
         },
       }}

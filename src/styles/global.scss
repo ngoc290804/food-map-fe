@@ -79,7 +79,8 @@ body {
   padding: 4px;
 }
 
-.main-layout__menu.ant-menu-horizontal > .ant-menu-item {
+.main-layout__menu.ant-menu-horizontal > .ant-menu-item,
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu {
   align-items: center;
   border-radius: 8px;
   color: #3f4652;
@@ -91,12 +92,26 @@ body {
   padding-inline: 0.9rem;
 }
 
-.main-layout__menu.ant-menu-horizontal > .ant-menu-item:hover {
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu {
+  padding-inline: 0.45rem;
+}
+
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu .ant-menu-submenu-title {
+  align-items: center;
+  display: inline-flex;
+  height: 44px;
+  margin: 0;
+  padding-inline: 0.45rem;
+}
+
+.main-layout__menu.ant-menu-horizontal > .ant-menu-item:hover,
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu:hover {
   background: #fff;
   color: #ef4f3f;
 }
 
-.main-layout__menu.ant-menu-horizontal > .ant-menu-item-selected {
+.main-layout__menu.ant-menu-horizontal > .ant-menu-item-selected,
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu-selected {
   background: #fff;
   box-shadow: 0 6px 16px rgba(239, 79, 63, 0.12);
   color: #ef4f3f;
@@ -104,8 +119,20 @@ body {
 }
 
 .main-layout__menu.ant-menu-horizontal > .ant-menu-item-selected::after,
-.main-layout__menu.ant-menu-horizontal > .ant-menu-item:hover::after {
+.main-layout__menu.ant-menu-horizontal > .ant-menu-item:hover::after,
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu-selected::after,
+.main-layout__menu.ant-menu-horizontal > .ant-menu-submenu:hover::after {
   border-bottom: none;
+}
+
+.main-layout__menu-title-button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0;
 }
 
 .main-layout__actions {
@@ -129,6 +156,8 @@ body {
   border-radius: 8px;
   color: #ef4f3f;
   height: 52px;
+  max-width: 220px;
+  overflow: hidden;
   padding-inline: 1.5rem;
 }
 
@@ -268,7 +297,56 @@ body {
 }
 
 .auth-card {
-  border-radius: 24px;
+  border-radius: 8px;
+}
+
+.chatbot-widget__trigger {
+  background: #fff;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  bottom: 24px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  height: 78px;
+  overflow: hidden;
+  padding: 0;
+  position: fixed;
+  right: 24px;
+  width: 78px;
+  z-index: 30;
+}
+
+.chatbot-widget__trigger img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.chatbot-widget-modal .ant-modal {
+  bottom: 112px;
+  margin: 0;
+  padding-bottom: 0;
+  position: fixed;
+  right: 24px;
+  top: auto;
+}
+
+.chatbot-widget-modal .ant-modal-content {
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.2);
+}
+
+.chatbot-widget__messages {
+  display: grid;
+  gap: 10px;
+}
+
+.chatbot-widget__message {
+  background: #f6f7f9;
+  border: 1px solid #eaedf2;
+  border-radius: 8px;
+  padding: 0.75rem;
 }
 
 @media (max-width: 992px) {
@@ -303,5 +381,19 @@ body {
 
   .offer-card {
     height: 420px;
+  }
+
+  .chatbot-widget__trigger {
+    bottom: 16px;
+    height: 68px;
+    right: 16px;
+    width: 68px;
+  }
+
+  .chatbot-widget-modal .ant-modal {
+    bottom: 96px;
+    max-width: calc(100vw - 32px);
+    right: 16px;
+    width: calc(100vw - 32px) !important;
   }
 }
