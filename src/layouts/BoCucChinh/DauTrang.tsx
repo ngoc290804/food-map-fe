@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 
-import { DownOutlined, UserOutlined } from '@ant-design/icons'
+import { DownOutlined, MoonOutlined, SunOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Flex, Menu, Space } from 'antd'
 import type { MenuProps } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -16,11 +16,14 @@ import {
 } from '@/config/food-filter.config'
 import { createAppMenuItems } from '@/config/menu.config'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useAppStore } from '@/store/app.store'
 
 function DauTrang() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
+  const appTheme = useAppStore((state) => state.theme)
+  const toggleTheme = useAppStore((state) => state.toggleTheme)
 
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   const selectedArea = getAreaByValue(searchParams.get(AREA_QUERY_KEY))
@@ -78,6 +81,15 @@ function DauTrang() {
         </button>
 
         <Flex align="center" className="main-layout__actions" gap={12}>
+          <Button
+            aria-label={appTheme === 'light' ? 'Đổi sang nền đen' : 'Đổi sang nền trắng'}
+            className="main-layout__theme-button"
+            icon={appTheme === 'light' ? <SunOutlined /> : <MoonOutlined />}
+            shape="circle"
+            title={appTheme === 'light' ? 'Đổi sang nền đen' : 'Đổi sang nền trắng'}
+            type="text"
+            onClick={toggleTheme}
+          />
           {user ? (
             <Dropdown
               menu={{
