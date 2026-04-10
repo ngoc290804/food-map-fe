@@ -19,6 +19,10 @@ function getPageTitle(pathname: string, detailValue: string | null) {
     return 'Thông tin tài khoản'
   }
 
+  if (pathname === '/quan-ly-quan-an') {
+    return 'Quản lý quán ăn'
+  }
+
   if (pathname.startsWith('/cua-hang/')) {
     return 'Chi tiết cửa hàng'
   }

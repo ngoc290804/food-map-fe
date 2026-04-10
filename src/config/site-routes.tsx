@@ -9,6 +9,9 @@ const CuaHangListPage = lazy(
 const CuaHangDetailPage = lazy(
   () => import('@/features/restaurant/pages/CuaHangDetailPage'),
 )
+const QuanLyCuaHangPage = lazy(
+  () => import('@/features/restaurant/pages/QuanLyCuaHangPage'),
+)
 const DangNhapFormPage = lazy(() => import('@/features/auth/pages/DangNhapFormPage'))
 const TaiKhoanDetailPage = lazy(() => import('@/features/auth/pages/TaiKhoanDetailPage'))
 const KhongTimThayPage = lazy(() => import('@/features/system/pages/KhongTimThayPage'))
@@ -26,6 +29,17 @@ const categoryRoutes: AppRouteItem[] = foodFilterMenuOptions.map((option) => ({
 
 export const appRoutes: AppRouteItem[] = [
   ...categoryRoutes,
+  {
+    key: 'restaurant-management',
+    path: '/quan-ly-quan-an',
+    element: QuanLyCuaHangPage,
+    meta: {
+      title: 'Quản lý quán ăn',
+      hidden: true,
+      layout: 'main',
+      breadcrumb: false,
+    },
+  },
   {
     key: 'store-detail',
     path: '/cua-hang/:id',

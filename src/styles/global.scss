@@ -110,9 +110,9 @@ body {
 .main-layout__brand-logo {
   border-radius: 8px;
   display: block;
-  height: 70px;
+  height: 60px;
   object-fit: cover;
-  width: 70px;
+  width: 60px;
 }
 
 .main-layout__brand-name {
@@ -377,6 +377,37 @@ body {
   padding: 0.95rem 1rem;
 }
 
+.restaurant-management {
+  width: 100%;
+}
+
+.restaurant-management .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.restaurant-management__row--active > td {
+  background: rgba(239, 79, 63, 0.08) !important;
+}
+
+.restaurant-management__menu-toolbar {
+  border-top: 1px solid var(--app-border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.restaurant-management__menu-toolbar .ant-typography {
+  margin-bottom: 0;
+}
+
+.restaurant-management__footer {
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+}
+
 .auth-layout {
   align-items: center;
   background: var(--app-bg);
@@ -397,16 +428,16 @@ body {
 .chatbot-widget__trigger {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
-  border-radius: 8px;
+  border-radius: 999px;
   bottom: 24px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
   cursor: pointer;
-  height: 78px;
+  height: 56px;
   overflow: hidden;
   padding: 0;
   position: fixed;
   right: 24px;
-  width: 78px;
+  width: 56px;
   z-index: 30;
 }
 
@@ -484,9 +515,9 @@ body {
 
   .chatbot-widget__trigger {
     bottom: 16px;
-    height: 68px;
+    height: 46px;
     right: 16px;
-    width: 68px;
+    width: 46px;
   }
 
   .chatbot-widget-modal .ant-modal {
