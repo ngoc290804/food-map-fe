@@ -1,14 +1,194 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="128" height="128" rx="24" fill="#38BDF8"></rect>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a120d"></stop>
+      <stop offset="100%" stop-color="#0b0b0b"></stop>
+    </linearGradient>
 
-  <!-- Map Pin -->
-  <path d="M64 28C50 28 42 38 42 50C42 70 64 96 64 96C64 96 86 70 86 50C86 38 78 28 64 28Z" fill="#FFFFFF"></path>
+    <linearGradient id="orangeText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffbf3f"></stop>
+      <stop offset="55%" stop-color="#ff7a00"></stop>
+      <stop offset="100%" stop-color="#e64600"></stop>
+    </linearGradient>
 
-  <!-- Bowl -->
-  <ellipse cx="64" cy="58" rx="12" ry="7" fill="#FB923C"></ellipse>
+    <linearGradient id="greenText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d7ff5b"></stop>
+      <stop offset="55%" stop-color="#7adf27"></stop>
+      <stop offset="100%" stop-color="#2f9c1c"></stop>
+    </linearGradient>
 
-  <!-- Chopsticks -->
-  <line x1="56" y1="48" x2="72" y2="54" stroke="#FACC15" stroke-width="2"></line>
-  <line x1="54" y1="52" x2="70" y2="58" stroke="#FACC15" stroke-width="2"></line>
+    <linearGradient id="fireGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff07a"></stop>
+      <stop offset="40%" stop-color="#ffb100"></stop>
+      <stop offset="75%" stop-color="#ff6a00"></stop>
+      <stop offset="100%" stop-color="#d93600"></stop>
+    </linearGradient>
+
+    <linearGradient id="beerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe17a"></stop>
+      <stop offset="100%" stop-color="#f59e0b"></stop>
+    </linearGradient>
+
+    <linearGradient id="cupGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff4d6"></stop>
+      <stop offset="100%" stop-color="#d69a3c"></stop>
+    </linearGradient>
+
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"></feDropShadow>
+    </filter>
+
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#ff7a00" flood-opacity="0.6"></feDropShadow>
+    </filter>
+
+    <style>
+      .strokeBlack { stroke:#111; stroke-width:10; stroke-linejoin:round; stroke-linecap:round; }
+      .strokeWhite { stroke:#fff; stroke-width:12; stroke-linejoin:round; stroke-linecap:round; }
+      .labelFont { font-family: Arial, Helvetica, sans-serif; font-weight: 900; }
+    </style>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#000"></rect>
+
+  <!-- Center group -->
+  <g filter="url(#shadow)">
+
+    <!-- Fire -->
+    <g transform="translate(0,-20)" filter="url(#glow)">
+      <path d="M470 270
+               C450 215, 500 205, 495 155
+               C535 180, 530 225, 545 245
+               C555 195, 615 195, 595 270
+               C635 245, 690 280, 666 345
+               L392 345
+               C365 290, 420 245, 470 270 Z" fill="url(#fireGrad)"></path>
+      <path d="M520 315
+               C505 280, 545 270, 540 235
+               C565 252, 564 281, 572 296
+               C586 264, 620 270, 612 315
+               Z" fill="#ffd84d"></path>
+    </g>
+
+    <!-- Grill -->
+    <g transform="translate(0,10)">
+      <ellipse cx="530" cy="360" rx="175" ry="62" fill="#1f1f23" class="strokeBlack"></ellipse>
+      <ellipse cx="530" cy="360" rx="138" ry="38" fill="#2c2c31" stroke="#ff6a00" stroke-width="8"></ellipse>
+      <g stroke="#ff7a00" stroke-width="6">
+        <line x1="412" y1="350" x2="648" y2="350"></line>
+        <line x1="420" y1="365" x2="640" y2="365"></line>
+        <line x1="440" y1="334" x2="430" y2="388"></line>
+        <line x1="475" y1="330" x2="465" y2="390"></line>
+        <line x1="510" y1="327" x2="500" y2="392"></line>
+        <line x1="545" y1="327" x2="555" y2="392"></line>
+        <line x1="580" y1="330" x2="590" y2="390"></line>
+        <line x1="615" y1="334" x2="625" y2="388"></line>
+      </g>
+
+      <!-- Meat skewer -->
+      <g transform="translate(0,-30)">
+        <line x1="450" y1="340" x2="650" y2="320" stroke="#f5e6b8" stroke-width="8" stroke-linecap="round"></line>
+        <rect x="455" y="310" rx="18" ry="18" width="55" height="38" fill="#d95a1f" class="strokeBlack"></rect>
+        <rect x="515" y="304" rx="18" ry="18" width="58" height="40" fill="#e36823" class="strokeBlack"></rect>
+        <rect x="578" y="298" rx="18" ry="18" width="60" height="42" fill="#d95a1f" class="strokeBlack"></rect>
+      </g>
+    </g>
+
+    <!-- Beer left -->
+    <g transform="translate(120,360)">
+      <path d="M0 10
+               Q0 0 15 0
+               L80 0
+               Q95 0 95 15
+               L95 170
+               Q95 185 80 185
+               L15 185
+               Q0 185 0 170 Z" fill="url(#beerGrad)" class="strokeWhite"></path>
+      <path d="M88 30
+               L120 30
+               Q145 30 145 60
+               L145 110
+               Q145 140 120 140
+               L98 140" fill="none" stroke="#111" stroke-width="10"></path>
+      <path d="M6 0
+               C-4 -30, 26 -40, 42 -25
+               C60 -50, 96 -28, 92 6
+               Z" fill="#f7f4ea" class="strokeWhite"></path>
+      <rect x="18" y="36" width="16" height="120" fill="#fff1c2" opacity="0.7"></rect>
+      <rect x="42" y="28" width="18" height="128" fill="#ffcf4a" opacity="0.8"></rect>
+      <rect x="66" y="40" width="12" height="110" fill="#fff1c2" opacity="0.5"></rect>
+    </g>
+
+    <!-- Bubble tea right -->
+    <g transform="translate(760,390)">
+      <path d="M20 40 L110 40 L95 185 Q93 205 73 205 L57 205 Q37 205 35 185 Z" fill="url(#cupGrad)" class="strokeWhite"></path>
+      <ellipse cx="65" cy="40" rx="58" ry="20" fill="#ebebeb" class="strokeWhite"></ellipse>
+      <ellipse cx="65" cy="38" rx="42" ry="10" fill="#fff8ee"></ellipse>
+      <rect x="68" y="-10" width="16" height="92" rx="4" fill="#ff7340" class="strokeBlack" transform="rotate(12 76 36)"></rect>
+      <g fill="#111">
+        <circle cx="40" cy="165" r="10"></circle>
+        <circle cx="65" cy="168" r="10"></circle>
+        <circle cx="87" cy="162" r="10"></circle>
+        <circle cx="50" cy="188" r="10"></circle>
+        <circle cx="78" cy="190" r="10"></circle>
+      </g>
+    </g>
+
+    <!-- Noodle bowl left bottom -->
+    <g transform="translate(140,560)">
+      <path d="M0 35 Q55 0 110 35 L96 78 Q55 96 14 78 Z" fill="#d83a18" class="strokeBlack"></path>
+      <path d="M8 35 Q55 15 102 35" fill="none" stroke="#fff" stroke-width="5"></path>
+      <path d="M36 10 C48 0, 76 0, 86 15" fill="none" stroke="#f7d36b" stroke-width="8" stroke-linecap="round"></path>
+      <path d="M25 20 C42 6, 70 8, 80 24" fill="none" stroke="#f7d36b" stroke-width="8" stroke-linecap="round"></path>
+      <line x1="-10" y1="8" x2="35" y2="28" stroke="#111" stroke-width="8" stroke-linecap="round"></line>
+      <line x1="-5" y1="-5" x2="40" y2="15" stroke="#111" stroke-width="8" stroke-linecap="round"></line>
+      <circle cx="28" cy="32" r="7" fill="#29b34a"></circle>
+      <circle cx="47" cy="39" r="7" fill="#e53935"></circle>
+    </g>
+
+    <!-- City accent -->
+    <g transform="translate(650,315)">
+      <rect x="0" y="30" width="30" height="80" rx="4" fill="#111"></rect>
+      <rect x="36" y="0" width="34" height="110" rx="4" fill="#1c1c1f"></rect>
+      <rect x="78" y="40" width="24" height="70" rx="4" fill="#111"></rect>
+      <g fill="#ffcb47">
+        <rect x="44" y="18" width="6" height="10"></rect>
+        <rect x="56" y="18" width="6" height="10"></rect>
+        <rect x="44" y="36" width="6" height="10"></rect>
+        <rect x="56" y="36" width="6" height="10"></rect>
+        <rect x="44" y="54" width="6" height="10"></rect>
+        <rect x="56" y="54" width="6" height="10"></rect>
+      </g>
+    </g>
+
+    <!-- Sparkles -->
+    <g fill="#ffb100">
+      <path d="M300 300 l12 -30 l12 30 l30 12 l-30 12 l-12 30 l-12 -30 l-30 -12z"></path>
+      <path d="M690 455 l8 -20 l8 20 l20 8 l-20 8 l-8 20 l-8 -20 l-20 -8z"></path>
+    </g>
+
+    <!-- Main logo text -->
+    <g transform="translate(0,40)">
+      <!-- White outline block -->
+      <text x="245" y="560" font-size="168" class="labelFont strokeWhite" fill="url(#orangeText)">ĐỒ</text>
+      <text x="480" y="560" font-size="168" class="labelFont strokeWhite" fill="url(#greenText)">ÁN</text>
+
+      <!-- Black inner outline -->
+      <text x="245" y="560" font-size="168" class="labelFont strokeBlack" fill="url(#orangeText)">ĐỒ</text>
+      <text x="480" y="560" font-size="168" class="labelFont strokeBlack" fill="url(#greenText)">ÁN</text>
+    </g>
+
+    <!-- Ribbon -->
+    <g transform="translate(0,50)">
+      <path d="M260 610
+               Q510 650 760 610
+               L735 700
+               Q510 735 285 700 Z" fill="#ef4e12" class="strokeBlack"></path>
+      <path d="M260 610 L225 642 L240 705 L285 700 Z" fill="#b93106"></path>
+      <path d="M760 610 L795 642 L780 705 L735 700 Z" fill="#b93106"></path>
+      <text x="512" y="678" text-anchor="middle" font-size="54" class="labelFont" fill="#fff">
+        Ăn Uống Thả Ga
+      </text>
+    </g>
+  </g>
 </svg>
