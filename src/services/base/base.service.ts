@@ -1,3 +1,5 @@
+import type { AxiosRequestConfig } from 'axios'
+
 import { axiosInstance } from '@/services/http/axiosInstance'
 
 export const baseService = {
@@ -16,8 +18,8 @@ export const baseService = {
 
     return response.data
   },
-  delete: async <T>(url: string) => {
-    const response = await axiosInstance.delete<T>(url)
+  delete: async <T>(url: string, config?: AxiosRequestConfig) => {
+    const response = await axiosInstance.delete<T>(url, config)
 
     return response.data
   },

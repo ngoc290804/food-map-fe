@@ -381,12 +381,12 @@ body {
   width: 100%;
 }
 
-.restaurant-management .ant-table-tbody > tr {
+.restaurant-management__list-table .ant-table-tbody > tr {
   cursor: pointer;
 }
 
-.restaurant-management__row--active > td {
-  background: rgba(239, 79, 63, 0.08) !important;
+.restaurant-management__list-table .ant-table-tbody > tr:hover > td {
+  background: rgba(239, 79, 63, 0.06);
 }
 
 .restaurant-management__menu-toolbar {

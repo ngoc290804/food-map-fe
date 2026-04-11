@@ -13,27 +13,34 @@ import TheTrangThai from "@/components/common/TheTrangThai";
 import {
   AREA_QUERY_KEY,
   FOOD_DETAIL_QUERY_KEY,
+  FoodCategoryFilter,
   getAreaByValue,
-  getFoodDetailByValue,
   getFoodFilterByPath,
 } from "@/config/food-filter.config";
 import { useRestaurantList } from "@/features/restaurant/hooks/useRestaurantList";
+import { useDebounce } from "@/hooks/useDebounce";
 
 function CuaHangListPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState("");
+  const debouncedKeyword = useDebounce(keyword);
   const currentCategory = getFoodFilterByPath(location.pathname);
-  const currentDetail = getFoodDetailByValue(
-    searchParams.get(FOOD_DETAIL_QUERY_KEY),
+  const isHomePage = currentCategory.value === FoodCategoryFilter.HOME;
+  const currentDetail = currentCategory.children?.find(
+    (option) => option.value === searchParams.get(FOOD_DETAIL_QUERY_KEY),
   );
+  const apiDetail = isHomePage
+    ? undefined
+    : (currentDetail ?? currentCategory.children?.[0]);
   const currentArea = getAreaByValue(searchParams.get(AREA_QUERY_KEY));
   const { data, isLoading } = useRestaurantList({
-    keyword,
-    category: currentCategory.value,
-    detail: currentDetail?.value,
-    area: currentArea.value,
+    keyword: debouncedKeyword,
+    category: isHomePage ? undefined : currentCategory.value,
+    detail: apiDetail?.value,
+    page: 0,
+    size: 10,
   });
   const pageTitle = currentDetail?.label ?? currentCategory.label;
   const pageDescription = currentDetail

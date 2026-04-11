@@ -7,7 +7,7 @@ export function handleResponseSuccess<T>(response: AxiosResponse<T>) {
 }
 
 export function handleResponseError(error: AxiosError) {
-  if (error.response?.status === 401) {
+  if (error.response?.status === 401 && !error.config?.skipAuthRedirect) {
     clearAuth()
     window.location.href = '/login'
   }

@@ -1,7 +1,7 @@
 import { Tag } from "antd";
 
 type TheTrangThaiProps = {
-  status: string;
+  status?: string | null;
 };
 
 const statusMap = {
@@ -11,11 +11,13 @@ const statusMap = {
 } as const;
 
 function TheTrangThai({ status }: TheTrangThaiProps) {
-  const normalizedStatus = status.toLowerCase() as keyof typeof statusMap;
+  const normalizedStatus = String(
+    status ?? "",
+  ).toLowerCase() as keyof typeof statusMap;
   const item = statusMap[normalizedStatus];
 
   if (!item) {
-    return <Tag>{status}</Tag>;
+    return <Tag>{status || "Không xác định"}</Tag>;
   }
 
   return <Tag color={item.color}>{item.label}</Tag>;
