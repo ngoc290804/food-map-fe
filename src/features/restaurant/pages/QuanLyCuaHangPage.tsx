@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PictureOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -9,6 +15,7 @@ import {
   Col,
   Flex,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -19,9 +26,10 @@ import {
   Table,
   TimePicker,
   Typography,
+  Upload,
   message,
 } from "antd";
-import type { TableProps } from "antd";
+import type { TableProps, UploadProps } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 
@@ -38,6 +46,7 @@ import {
   type RestaurantPayload,
 } from "@/features/restaurant/services/restaurant.service";
 import type { RestaurantDto } from "@/features/restaurant/types/restaurant.dto";
+import { uploadService } from "@/services/upload/upload.service";
 
 type MenuManageItem = {
   id: string;
@@ -45,6 +54,9 @@ type MenuManageItem = {
   price: number;
   mainIngredient: string;
   description: string;
+  imageUrl: string | null;
+  imagePublicId: string | null;
+  imageFile?: File | null;
   available: boolean;
 };
 
@@ -53,6 +65,8 @@ type RestaurantManageItem = {
   name: string;
   address: string;
   description: string;
+  imageUrl: string | null;
+  imagePublicId: string | null;
   category: FoodCategoryFilter;
   detail: FoodDetailFilter;
   openTime: string;
@@ -65,6 +79,8 @@ type RestaurantFormValues = {
   name: string;
   address: string;
   description?: string;
+  imageUrl?: string;
+  imagePublicId?: string | null;
   category?: FoodCategoryFilter;
   detail?: FoodDetailFilter;
   openTime?: Dayjs;
@@ -77,6 +93,8 @@ type MenuFormValues = {
   price: number;
   mainIngredient: string;
   description?: string;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
   available?: boolean;
 };
 
@@ -90,6 +108,8 @@ function createEmptyRestaurant(): RestaurantManageItem {
     name: "",
     address: "",
     description: "",
+    imageUrl: null,
+    imagePublicId: null,
     category: FoodCategoryFilter.RESTAURANT,
     detail: detail?.value ?? FoodDetailFilter.BUN_PHO,
     openTime: "08:00",
@@ -109,6 +129,16 @@ function timeToDayjs(value?: string) {
 
 function formatTime(value?: Dayjs) {
   return value ? value.format("HH:mm") : "";
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 const manageableCategoryValues: FoodCategoryFilter[] = [
@@ -164,6 +194,8 @@ function mapRestaurantDtoToManageItem(
     name: item.name,
     address: item.address,
     description: item.description,
+    imageUrl: item.imageUrl,
+    imagePublicId: item.imagePublicId,
     category,
     detail: getManageableDetail(category, item.loaiKinhDoanh),
     openTime: item.openTime,
@@ -176,6 +208,7 @@ function mapRestaurantDtoToManageItem(
 function buildRestaurantPayload(
   values: RestaurantFormValues,
   status?: string,
+  imageFile?: File | null,
 ): RestaurantPayload {
   const category = values.category ?? FoodCategoryFilter.RESTAURANT;
   const detail = values.detail ?? getManageableDetail(category);
@@ -186,7 +219,9 @@ function buildRestaurantPayload(
     openTime: formatTime(values.openTime),
     closeTime: formatTime(values.closeTime),
     description: values.description ?? "",
-    imageUrl: null,
+    imageUrl: values.imageUrl?.trim() || null,
+    imageFile: imageFile ?? null,
+    imagePublicId: values.imagePublicId ?? null,
     loaiCuaHang: category,
     loaiKinhDoanh: detail,
     ...(status ? { status } : {}),
@@ -203,7 +238,8 @@ function buildMenuItemPayload(
     giaTien: values.price,
     nguyenLieuChinh: values.mainIngredient,
     moTa: values.description ?? "",
-    hinhAnh: null,
+    hinhAnh: values.imageUrl ?? null,
+    imagePublicId: values.imagePublicId ?? null,
     conBan: values.available ?? true,
   };
 }
@@ -233,6 +269,9 @@ function QuanLyCuaHangPage() {
     useState<RestaurantManageItem | null>(null);
   const [restaurantModalOpen, setRestaurantModalOpen] = useState(false);
   const [isCreatingRestaurant, setIsCreatingRestaurant] = useState(false);
+  const [restaurantImageFile, setRestaurantImageFile] = useState<File | null>(
+    null,
+  );
   const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
   const [menuListError, setMenuListError] = useState(false);
@@ -241,6 +280,7 @@ function QuanLyCuaHangPage() {
     Form.useWatch("category", restaurantForm) ??
     selectedRestaurant?.category ??
     FoodCategoryFilter.RESTAURANT;
+  const imageUrlPreview = Form.useWatch("imageUrl", restaurantForm)?.trim();
   const detailOptions = getCategoryDetailOptions(selectedCategory);
   const createRestaurantMutation = useMutation({
     mutationFn: (payload: RestaurantPayload) =>
@@ -283,7 +323,7 @@ function QuanLyCuaHangPage() {
   const isSavingMenuItem =
     createMenuItemMutation.isPending || updateMenuItemMutation.isPending;
   const isDeletingMenuItem = deleteMenuItemMutation.isPending;
-  const selectedMenuItems = isCreatingRestaurant
+  const selectedMenuItems: MenuManageItem[] = isCreatingRestaurant
     ? (selectedRestaurant?.menuItems ?? [])
     : fetchedMenuItems.map((item) => ({
         id: item.id,
@@ -291,8 +331,65 @@ function QuanLyCuaHangPage() {
         price: item.price,
         mainIngredient: item.mainIngredient,
         description: item.description,
+        imageUrl: item.imageUrl,
+        imagePublicId: item.imagePublicId,
         available: item.available,
       }));
+  const selectedMenuImages = selectedMenuItems.filter((item) => item.imageUrl);
+
+  const selectMenuItemImage = async (record: MenuManageItem, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      messageApi.error("Vui lòng chọn file hình ảnh.");
+
+      return Upload.LIST_IGNORE;
+    }
+
+    if (!selectedRestaurant) {
+      return Upload.LIST_IGNORE;
+    }
+
+    try {
+      const previewUrl = await readFileAsDataUrl(file);
+
+      if (isCreatingRestaurant) {
+        setSelectedRestaurant((current) =>
+          current
+            ? {
+                ...current,
+                menuItems: current.menuItems.map((item) =>
+                  item.id === record.id
+                    ? {
+                        ...item,
+                        imageUrl: previewUrl,
+                        imageFile: file,
+                        imagePublicId: null,
+                      }
+                    : item,
+                ),
+              }
+            : current,
+        );
+      } else {
+        const uploadedImage = await uploadService.uploadImage(file);
+        await updateMenuItemMutation.mutateAsync({
+          id: record.id,
+          payload: buildMenuItemPayload(selectedRestaurant.id, {
+            ...record,
+            imageUrl: uploadedImage.url,
+            imagePublicId: uploadedImage.publicId,
+          }),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["restaurant-menu-items", selectedRestaurant.id],
+        });
+        messageApi.success("Đã cập nhật ảnh món ăn");
+      }
+    } catch {
+      messageApi.error("Không thể cập nhật ảnh món ăn. Vui lòng thử lại.");
+    }
+
+    return false;
+  };
 
   useEffect(() => {
     setRestaurants(restaurantRows);
@@ -307,6 +404,8 @@ function QuanLyCuaHangPage() {
       name: selectedRestaurant.name,
       address: selectedRestaurant.address,
       description: selectedRestaurant.description,
+      imageUrl: selectedRestaurant.imageUrl ?? "",
+      imagePublicId: selectedRestaurant.imagePublicId,
       category: selectedRestaurant.category,
       detail: selectedRestaurant.detail,
       openTime: timeToDayjs(selectedRestaurant.openTime),
@@ -363,6 +462,51 @@ function QuanLyCuaHangPage() {
       dataIndex: "description",
     },
     {
+      title: "Hình ảnh",
+      dataIndex: "imageUrl",
+      render: (_value, record) => (
+        <Space align="center" size={8}>
+          {record.imageUrl ? (
+            <Image
+              alt={record.name}
+              height={44}
+              src={record.imageUrl}
+              style={{ borderRadius: 8, objectFit: "cover" }}
+              width={44}
+            />
+          ) : (
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                background: "var(--app-muted-bg)",
+                borderRadius: 8,
+                height: 44,
+                width: 44,
+              }}
+            >
+              <PictureOutlined />
+            </Flex>
+          )}
+          <Upload
+            accept="image/*"
+            beforeUpload={(file) => selectMenuItemImage(record, file)}
+            maxCount={1}
+            showUploadList={false}
+          >
+            <Button
+              icon={<UploadOutlined />}
+              loading={!isCreatingRestaurant && isSavingMenuItem}
+              size="small"
+            >
+              {record.imageUrl ? "Đổi ảnh" : "Chọn ảnh"}
+            </Button>
+          </Upload>
+        </Space>
+      ),
+      width: 190,
+    },
+    {
       title: "Trạng thái",
       dataIndex: "available",
       render: (value: boolean) => (value ? "Còn bán" : "Ngừng bán"),
@@ -404,6 +548,7 @@ function QuanLyCuaHangPage() {
 
   const selectRestaurant = (record: RestaurantManageItem) => {
     setMenuListError(false);
+    setRestaurantImageFile(null);
     setSelectedRestaurant({
       ...record,
       menuItems: [...record.menuItems],
@@ -414,6 +559,7 @@ function QuanLyCuaHangPage() {
 
   const openCreateRestaurantForm = () => {
     setMenuListError(false);
+    setRestaurantImageFile(null);
     restaurantForm.resetFields();
     setSelectedRestaurant(createEmptyRestaurant());
     setIsCreatingRestaurant(true);
@@ -425,10 +571,36 @@ function QuanLyCuaHangPage() {
     setMenuModalOpen(false);
     setSelectedRestaurant(null);
     setIsCreatingRestaurant(false);
+    setRestaurantImageFile(null);
     setEditingMenuId(null);
     setMenuListError(false);
     restaurantForm.resetFields();
     menuForm.resetFields();
+  };
+
+  const selectRestaurantImage: UploadProps["beforeUpload"] = async (file) => {
+    if (!file.type.startsWith("image/")) {
+      messageApi.error("Vui lòng chọn file hình ảnh.");
+
+      return Upload.LIST_IGNORE;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      restaurantForm.setFieldValue("imageUrl", dataUrl);
+      restaurantForm.setFieldValue("imagePublicId", null);
+      setRestaurantImageFile(file);
+    } catch {
+      messageApi.error("Không thể đọc file hình ảnh. Vui lòng thử lại.");
+    }
+
+    return false;
+  };
+
+  const removeRestaurantImage = () => {
+    restaurantForm.setFieldValue("imageUrl", "");
+    restaurantForm.setFieldValue("imagePublicId", null);
+    setRestaurantImageFile(null);
   };
 
   const openCreateMenuModal = () => {
@@ -451,12 +623,20 @@ function QuanLyCuaHangPage() {
       return;
     }
 
+    const editingMenuItem = editingMenuId
+      ? selectedMenuItems.find((item) => item.id === editingMenuId)
+      : undefined;
+
     if (!isCreatingRestaurant) {
       try {
         if (editingMenuId) {
           await updateMenuItemMutation.mutateAsync({
             id: editingMenuId,
-            payload: buildMenuItemPayload(selectedRestaurant.id, values),
+            payload: buildMenuItemPayload(selectedRestaurant.id, {
+              ...values,
+              imageUrl: editingMenuItem?.imageUrl,
+              imagePublicId: editingMenuItem?.imagePublicId,
+            }),
           });
           messageApi.success("Đã cập nhật món ăn");
         } else {
@@ -492,6 +672,9 @@ function QuanLyCuaHangPage() {
         price: values.price,
         mainIngredient: values.mainIngredient,
         description: values.description ?? "",
+        imageUrl: editingMenuItem?.imageUrl ?? null,
+        imagePublicId: editingMenuItem?.imagePublicId ?? null,
+        imageFile: editingMenuItem?.imageFile ?? null,
         available: values.available ?? true,
       };
       const menuItems = editingMenuId
@@ -551,21 +734,27 @@ function QuanLyCuaHangPage() {
     try {
       if (isCreatingRestaurant) {
         const createdRestaurant = await createRestaurantMutation.mutateAsync(
-          buildRestaurantPayload(values),
+          buildRestaurantPayload(values, undefined, restaurantImageFile),
         );
         await Promise.all(
-          selectedRestaurant.menuItems.map((item) =>
-            restaurantService.createMenuItem(
+          selectedRestaurant.menuItems.map(async (item) => {
+            const uploadedImage = item.imageFile
+              ? await uploadService.uploadImage(item.imageFile)
+              : null;
+
+            return restaurantService.createMenuItem(
               createdRestaurant.id,
               buildMenuItemPayload(createdRestaurant.id, {
                 name: item.name,
                 price: item.price,
                 mainIngredient: item.mainIngredient,
                 description: item.description,
+                imageUrl: uploadedImage?.url ?? item.imageUrl,
+                imagePublicId: uploadedImage?.publicId ?? item.imagePublicId,
                 available: item.available,
               }),
-            ),
-          ),
+            );
+          }),
         );
         messageApi.success("Đã thêm quán ăn");
       } else {
@@ -574,6 +763,7 @@ function QuanLyCuaHangPage() {
           payload: buildRestaurantPayload(
             values,
             values.active ? "ACTIVE" : "INACTIVE",
+            restaurantImageFile,
           ),
         });
         messageApi.success("Đã cập nhật quán ăn");
@@ -680,6 +870,47 @@ function QuanLyCuaHangPage() {
                 <Form.Item label="Mô tả" name="description">
                   <Input.TextArea placeholder="Nhập mô tả ngắn" rows={3} />
                 </Form.Item>
+                <Form.Item hidden name="imageUrl">
+                  <Input />
+                </Form.Item>
+                <Form.Item hidden name="imagePublicId">
+                  <Input />
+                </Form.Item>
+                <Form.Item label="Hình ảnh quán">
+                  <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                    <Space wrap>
+                      <Upload
+                        accept="image/*"
+                        beforeUpload={selectRestaurantImage}
+                        maxCount={1}
+                        showUploadList={false}
+                      >
+                        <Button icon={<UploadOutlined />}>
+                          {imageUrlPreview ? "Thay đổi hình ảnh" : "Chọn hình ảnh"}
+                        </Button>
+                      </Upload>
+                      {imageUrlPreview ? (
+                        <Button onClick={removeRestaurantImage}>Xóa hình ảnh</Button>
+                      ) : null}
+                    </Space>
+                    <Typography.Text type="secondary">
+                      Chọn file ảnh từ máy tính. Ảnh sẽ được hiển thị trước khi lưu.
+                    </Typography.Text>
+                  </Space>
+                </Form.Item>
+                {imageUrlPreview ? (
+                  <Image
+                    alt="Hình ảnh quán"
+                    height={180}
+                    src={imageUrlPreview}
+                    style={{
+                      borderRadius: 8,
+                      marginBottom: 16,
+                      objectFit: "cover",
+                    }}
+                    width="100%"
+                  />
+                ) : null}
                 <Row gutter={12}>
                   <Col sm={12} span={24}>
                     <Form.Item
@@ -771,6 +1002,39 @@ function QuanLyCuaHangPage() {
                   Vui lòng thêm ít nhất 1 món ăn trước khi lưu quán mới.
                 </Typography.Text>
               ) : null}
+
+              <Card
+                className="restaurant-management__image-card"
+                size="small"
+                title="Ảnh món vừa thêm"
+              >
+                {selectedMenuImages.length > 0 ? (
+                  <div className="restaurant-management__image-gallery">
+                    {selectedMenuImages.map((item) => (
+                      <div
+                        className="restaurant-management__image-item"
+                        key={item.id}
+                      >
+                        <Image
+                          alt={item.name}
+                          className="restaurant-management__image-thumb"
+                          src={item.imageUrl ?? ""}
+                        />
+                        <Typography.Text
+                          className="restaurant-management__image-name"
+                          ellipsis={{ tooltip: item.name }}
+                        >
+                          {item.name}
+                        </Typography.Text>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Typography.Text type="secondary">
+                    Chưa có ảnh món ăn nào được chọn.
+                  </Typography.Text>
+                )}
+              </Card>
 
               <div className="restaurant-management__footer">
                 <Button

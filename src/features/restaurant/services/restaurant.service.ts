@@ -30,6 +30,8 @@ export type RestaurantPayload = {
   closeTime: string;
   description: string;
   imageUrl: string | null;
+  imageFile?: File | null;
+  imagePublicId?: string | null;
   loaiCuaHang: FoodCategoryFilter;
   loaiKinhDoanh: FoodDetailFilter;
   status?: string;
@@ -42,6 +44,7 @@ export type MenuItemPayload = {
   nguyenLieuChinh: string;
   moTa: string;
   hinhAnh: string | null;
+  imagePublicId?: string | null;
   conBan: boolean;
 };
 
@@ -66,6 +69,7 @@ function normalizeRestaurant(item?: CuaHangVo | null): RestaurantDto {
     closeTime: item?.gioDongCua ?? "",
     description: item?.moTa ?? "",
     imageUrl: item?.hinhAnh ?? null,
+    imagePublicId: item?.imagePublicId ?? null,
     status: item?.trangThai ?? "ACTIVE",
     loaiCuaHang: item?.loaiCuaHang ?? undefined,
     loaiKinhDoanh: item?.loaiKinhDoanh ?? undefined,
@@ -82,8 +86,39 @@ function normalizeMenuItem(item?: MonAnVo | null): MenuItemDto {
     mainIngredient: item?.nguyenLieuChinh ?? "",
     description: item?.moTa ?? "",
     imageUrl: item?.hinhAnh ?? null,
+    imagePublicId: item?.imagePublicId ?? null,
     available: item?.conBan ?? true,
   };
+}
+
+function buildRestaurantFormData(payload: RestaurantPayload) {
+  const formData = new FormData();
+
+  formData.append("tenQuanAn", payload.name);
+  formData.append("diaChi", payload.address);
+  formData.append("gioMoCua", payload.openTime);
+  formData.append("gioDongCua", payload.closeTime);
+  formData.append("moTa", payload.description);
+  formData.append("loaiCuaHang", payload.loaiCuaHang);
+  formData.append("loaiKinhDoanh", payload.loaiKinhDoanh);
+
+  if (payload.status) {
+    formData.append("trangThai", payload.status);
+  }
+
+  if (payload.imageUrl && !payload.imageFile) {
+    formData.append("hinhAnh", payload.imageUrl);
+  }
+
+  if (payload.imagePublicId && !payload.imageFile) {
+    formData.append("imagePublicId", payload.imagePublicId);
+  }
+
+  if (payload.imageFile) {
+    formData.append("image", payload.imageFile);
+  }
+
+  return formData;
 }
 
 export const restaurantService = {
@@ -104,10 +139,17 @@ export const restaurantService = {
         : [],
     };
   },
+  getDetail: async (id: string) => {
+    const response = await baseService.get<ApiResponse<CuaHangVo>>(
+      `${endpoints.restaurants}/${id}`,
+    );
+
+    return normalizeRestaurant(response.data);
+  },
   create: async (payload: RestaurantPayload) => {
     const response = await baseService.post<ApiResponse<CuaHangVo>>(
       endpoints.restaurants,
-      payload,
+      payload.imageFile ? buildRestaurantFormData(payload) : payload,
     );
 
     return normalizeRestaurant(response.data);
@@ -115,7 +157,7 @@ export const restaurantService = {
   update: async (id: string, payload: RestaurantPayload) => {
     const response = await baseService.put<ApiResponse<CuaHangVo>>(
       `${endpoints.restaurants}/${id}`,
-      payload,
+      payload.imageFile ? buildRestaurantFormData(payload) : payload,
     );
 
     return normalizeRestaurant(response.data);

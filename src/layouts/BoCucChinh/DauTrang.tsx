@@ -81,6 +81,21 @@ function DauTrang() {
         </button>
 
         <Flex align="center" className="main-layout__actions" gap={12}>
+          <Dropdown
+            menu={{
+              items: areaMenuItems,
+              selectedKeys: [selectedArea.value],
+              onClick: handleAreaClick,
+            }}
+            trigger={['click']}
+          >
+            <Button className="main-layout__city-button" size="large">
+              <Space>
+                {selectedArea.label}
+                <DownOutlined />
+              </Space>
+            </Button>
+          </Dropdown>
           <Button
             aria-label={appTheme === 'light' ? 'Đổi sang nền đen' : 'Đổi sang nền trắng'}
             className="main-layout__theme-button"
@@ -121,22 +136,6 @@ function DauTrang() {
       </Flex>
 
       <Flex align="center" className="main-layout__menu-row" gap={16} wrap="wrap">
-        <Dropdown
-          menu={{
-            items: areaMenuItems,
-            selectedKeys: [selectedArea.value],
-            onClick: handleAreaClick,
-          }}
-          trigger={['click']}
-        >
-          <Button className="main-layout__city-button" size="large">
-            <Space>
-              {selectedArea.label}
-              <DownOutlined />
-            </Space>
-          </Button>
-        </Dropdown>
-
         <nav className="main-layout__nav" aria-label="Danh mục">
           <Menu
             className="main-layout__menu"

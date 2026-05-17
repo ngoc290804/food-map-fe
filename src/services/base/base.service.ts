@@ -8,13 +8,21 @@ export const baseService = {
 
     return response.data
   },
-  post: async <T>(url: string, payload?: unknown) => {
-    const response = await axiosInstance.post<T>(url, payload)
+  post: async <T>(
+    url: string,
+    payload?: unknown,
+    config?: AxiosRequestConfig,
+  ) => {
+    const response = await axiosInstance.post<T>(url, payload, config)
 
     return response.data
   },
-  put: async <T>(url: string, payload?: unknown) => {
-    const response = await axiosInstance.put<T>(url, payload)
+  put: async <T>(
+    url: string,
+    payload?: unknown,
+    config?: AxiosRequestConfig,
+  ) => {
+    const response = await axiosInstance.put<T>(url, payload, config)
 
     return response.data
   },

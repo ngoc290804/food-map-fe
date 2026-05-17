@@ -11,6 +11,7 @@ export type CuaHangVo = {
   gioDongCua?: string | null;
   moTa?: string | null;
   hinhAnh?: string | null;
+  imagePublicId?: string | null;
   trangThai?: string | null;
   loaiCuaHang?: FoodCategoryFilter | null;
   loaiKinhDoanh?: FoodDetailFilter | null;
@@ -24,6 +25,7 @@ export type RestaurantDto = {
   closeTime: string;
   description: string;
   imageUrl: string | null;
+  imagePublicId: string | null;
   status: string;
   loaiCuaHang?: FoodCategoryFilter;
   loaiKinhDoanh?: FoodDetailFilter;
@@ -38,6 +40,7 @@ export type MonAnVo = {
   nguyenLieuChinh?: string | null;
   moTa?: string | null;
   hinhAnh?: string | null;
+  imagePublicId?: string | null;
   conBan?: boolean | null;
 };
 
@@ -50,5 +53,6 @@ export type MenuItemDto = {
   mainIngredient: string;
   description: string;
   imageUrl: string | null;
+  imagePublicId: string | null;
   available: boolean;
 };
