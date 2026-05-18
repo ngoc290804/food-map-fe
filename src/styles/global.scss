@@ -282,8 +282,8 @@ body {
 
 .offer-list {
   display: grid;
-  gap: 24px;
-  grid-template-columns: repeat(auto-fill, 360px);
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .offer-card {
@@ -295,7 +295,7 @@ body {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  height: 420px;
+  height: 360px;
   overflow: hidden;
   padding: 0;
   position: relative;
@@ -336,13 +336,17 @@ body {
     linear-gradient(45deg, #f7d6ca, #fbf5ef);
   background-position: center;
   background-size: cover;
-  flex: 0 0 168px;
+  flex: 0 0 132px;
 }
 
 .offer-card__body {
   border-top: 1px solid var(--app-border);
   flex: 1;
-  padding: 1rem 1rem 0.75rem;
+  padding: 0.8rem 0.85rem 0.65rem;
+}
+
+.offer-card__body h4.ant-typography {
+  font-size: 1rem;
 }
 
 .offer-card__body .ant-typography {
@@ -351,18 +355,18 @@ body {
 
 .offer-card__address {
   color: var(--app-text-subtle);
-  margin-top: 0.45rem;
+  margin-top: 0.35rem;
 }
 
 .offer-card__time {
   color: var(--app-text-muted);
-  margin-top: 0.65rem;
+  margin-top: 0.5rem;
 }
 
 .offer-card__description.ant-typography {
   color: var(--app-text-muted);
   margin-bottom: 0;
-  margin-top: 0.65rem;
+  margin-top: 0.5rem;
 }
 
 .offer-card__footer {
@@ -370,10 +374,10 @@ body {
   border-top: 1px solid var(--app-border);
   color: var(--app-text);
   display: flex;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
   font-weight: 500;
   gap: 0.65rem;
-  padding: 0.95rem 1rem;
+  padding: 0.75rem 0.85rem;
 }
 
 .restaurant-management {
@@ -407,35 +411,32 @@ body {
   margin-top: 1rem;
 }
 
-.restaurant-management__image-gallery {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 132px));
+.restaurant-detail__info-card {
+  padding-bottom: 3.25rem;
+  position: relative;
 }
 
-.restaurant-management__image-item {
-  background: var(--app-surface-soft);
-  border: 1px solid var(--app-border);
+.restaurant-detail__direction-button.ant-btn {
+  bottom: 1rem;
+  position: absolute;
+  right: 1rem;
+}
+
+.restaurant-detail__map-card {
+  position: sticky;
+  top: 1rem;
+}
+
+.restaurant-detail__map {
   border-radius: 8px;
+  height: 500px;
   overflow: hidden;
-  padding: 6px;
-}
-
-.restaurant-management__image-thumb.ant-image,
-.restaurant-management__image-thumb img {
-  aspect-ratio: 1;
-  border-radius: 6px;
-  display: block;
-  height: auto;
-  object-fit: cover;
   width: 100%;
 }
 
-.restaurant-management__image-name {
+.restaurant-detail__map-coordinate {
   display: block;
-  font-size: 0.82rem;
-  margin-top: 6px;
-  max-width: 100%;
+  margin-top: 0.75rem;
 }
 
 .restaurant-detail__photo-card {
@@ -513,11 +514,21 @@ body {
 }
 
 .auth-layout__panel {
-  width: min(100%, 480px);
+  width: min(100%, 400px);
 }
 
 .auth-card {
   border-radius: 8px;
+}
+
+.auth-card .ant-card-body {
+  padding: 1.5rem;
+}
+
+.auth-card .ant-typography h2,
+.auth-card h2.ant-typography {
+  font-size: 1.55rem;
+  margin-bottom: 0.25rem;
 }
 
 .chatbot-widget__trigger {
@@ -569,7 +580,21 @@ body {
   padding: 0.75rem;
 }
 
+@media (max-width: 1200px) {
+  .offer-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 992px) {
+  .restaurant-detail__map-card {
+    position: static;
+  }
+
+  .restaurant-detail__map {
+    height: 360px;
+  }
+
   .main-layout__header-shell {
     padding: 0 1rem 1rem;
   }
@@ -599,6 +624,12 @@ body {
   }
 }
 
+@media (max-width: 768px) {
+  .offer-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 480px) {
   .auth-layout {
     align-items: stretch;
@@ -620,7 +651,7 @@ body {
   }
 
   .offer-card {
-    height: 420px;
+    height: 360px;
   }
 
   .chatbot-widget__trigger {

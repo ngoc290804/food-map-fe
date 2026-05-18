@@ -60,6 +60,12 @@ function normalizeParams(params?: RestaurantListParams) {
   );
 }
 
+function normalizeCoordinate(value?: number | string | null) {
+  const coordinate = Number(value);
+
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
 function normalizeRestaurant(item?: CuaHangVo | null): RestaurantDto {
   return {
     id: item?.id ?? "",
@@ -70,6 +76,8 @@ function normalizeRestaurant(item?: CuaHangVo | null): RestaurantDto {
     description: item?.moTa ?? "",
     imageUrl: item?.hinhAnh ?? null,
     imagePublicId: item?.imagePublicId ?? null,
+    latitude: normalizeCoordinate(item?.latitude),
+    longitude: normalizeCoordinate(item?.longitude),
     status: item?.trangThai ?? "ACTIVE",
     loaiCuaHang: item?.loaiCuaHang ?? undefined,
     loaiKinhDoanh: item?.loaiKinhDoanh ?? undefined,

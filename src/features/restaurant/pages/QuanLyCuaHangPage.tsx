@@ -32,6 +32,10 @@ import {
 import type { TableProps, UploadProps } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import Gallery, {
+  type PhotoProps,
+  type RenderImageProps,
+} from "react-photo-gallery";
 
 import { DEFAULT_PAGE_SIZE } from "@/config/constants";
 import {
@@ -47,6 +51,10 @@ import {
 } from "@/features/restaurant/services/restaurant.service";
 import type { RestaurantDto } from "@/features/restaurant/types/restaurant.dto";
 import { uploadService } from "@/services/upload/upload.service";
+
+type MenuManagePhoto = PhotoProps<{
+  title?: string;
+}>;
 
 type MenuManageItem = {
   id: string;
@@ -272,6 +280,9 @@ function QuanLyCuaHangPage() {
   const [restaurantImageFile, setRestaurantImageFile] = useState<File | null>(
     null,
   );
+  const [menuImageSizes, setMenuImageSizes] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
   const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
   const [menuListError, setMenuListError] = useState(false);
@@ -336,6 +347,71 @@ function QuanLyCuaHangPage() {
         available: item.available,
       }));
   const selectedMenuImages = selectedMenuItems.filter((item) => item.imageUrl);
+  const menuGalleryPhotos = useMemo<MenuManagePhoto[]>(
+    () =>
+      selectedMenuImages.map((item) => {
+        const size = menuImageSizes[item.id] ?? { width: 4, height: 3 };
+
+        return {
+          key: item.id,
+          src: item.imageUrl ?? "",
+          width: size.width,
+          height: size.height,
+          alt: item.name,
+          title: item.name,
+        };
+      }),
+    [menuImageSizes, selectedMenuImages],
+  );
+
+  useEffect(() => {
+    selectedMenuImages.forEach((item) => {
+      if (!item.imageUrl || menuImageSizes[item.id]) {
+        return;
+      }
+
+      const image = new window.Image();
+      image.onload = () => {
+        setMenuImageSizes((current) => ({
+          ...current,
+          [item.id]: {
+            width: image.naturalWidth || 4,
+            height: image.naturalHeight || 3,
+          },
+        }));
+      };
+      image.src = item.imageUrl;
+    });
+  }, [menuImageSizes, selectedMenuImages]);
+
+  const renderMenuGalleryPhoto = ({
+    index,
+    margin,
+    photo,
+  }: RenderImageProps<{ title?: string }>) => (
+    <div
+      className="restaurant-detail__photo-card"
+      key={photo.key ?? index}
+      style={{
+        margin,
+        width: photo.width,
+      }}
+    >
+      <Image
+        alt={photo.alt}
+        className="restaurant-detail__photo"
+        height={photo.height}
+        src={photo.src}
+        width={photo.width}
+      />
+      <Typography.Text
+        className="restaurant-detail__photo-caption"
+        ellipsis={{ tooltip: photo.title }}
+      >
+        {photo.title}
+      </Typography.Text>
+    </div>
+  );
 
   const selectMenuItemImage = async (record: MenuManageItem, file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -1008,27 +1084,16 @@ function QuanLyCuaHangPage() {
                 size="small"
                 title="Ảnh món vừa thêm"
               >
-                {selectedMenuImages.length > 0 ? (
-                  <div className="restaurant-management__image-gallery">
-                    {selectedMenuImages.map((item) => (
-                      <div
-                        className="restaurant-management__image-item"
-                        key={item.id}
-                      >
-                        <Image
-                          alt={item.name}
-                          className="restaurant-management__image-thumb"
-                          src={item.imageUrl ?? ""}
-                        />
-                        <Typography.Text
-                          className="restaurant-management__image-name"
-                          ellipsis={{ tooltip: item.name }}
-                        >
-                          {item.name}
-                        </Typography.Text>
-                      </div>
-                    ))}
-                  </div>
+                {menuGalleryPhotos.length > 0 ? (
+                  <Gallery
+                    direction="row"
+                    margin={8}
+                    photos={menuGalleryPhotos}
+                    renderImage={renderMenuGalleryPhoto}
+                    targetRowHeight={(containerWidth) =>
+                      containerWidth < 640 ? 120 : 150
+                    }
+                  />
                 ) : (
                   <Typography.Text type="secondary">
                     Chưa có ảnh món ăn nào được chọn.
@@ -1052,16 +1117,24 @@ function QuanLyCuaHangPage() {
                     Hủy
                   </Button>
                 ) : (
-                  <Popconfirm
-                    cancelText="Hủy"
-                    okText="Xóa"
-                    title="Xóa quán ăn này?"
-                    onConfirm={deleteRestaurant}
-                  >
-                    <Button danger loading={isDeletingRestaurant}>
-                      Xóa
+                  <>
+                    <Button
+                      disabled={isSavingRestaurant || isDeletingRestaurant}
+                      onClick={closeRestaurantModal}
+                    >
+                      Đóng
                     </Button>
-                  </Popconfirm>
+                    <Popconfirm
+                      cancelText="Hủy"
+                      okText="Xóa"
+                      title="Xóa quán ăn này?"
+                      onConfirm={deleteRestaurant}
+                    >
+                      <Button danger loading={isDeletingRestaurant}>
+                        Xóa
+                      </Button>
+                    </Popconfirm>
+                  </>
                 )}
               </div>
             </>

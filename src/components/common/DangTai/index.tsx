@@ -9,14 +9,18 @@ function DangTai({ fullscreen = false, tip = 'Đang tải dữ liệu...' }: Dan
   if (fullscreen) {
     return (
       <Flex align="center" justify="center" style={{ minHeight: '100vh' }}>
-        <Spin size="large" tip={tip} />
+        <Spin size="large">
+          <div style={{ paddingTop: 32 }}>{tip}</div>
+        </Spin>
       </Flex>
     )
   }
 
   return (
     <Flex align="center" justify="center" style={{ minHeight: 240 }}>
-      <Spin size="large" tip={tip} />
+      <Spin size="large">
+        <div style={{ paddingTop: 32 }}>{tip}</div>
+      </Spin>
     </Flex>
   )
 }

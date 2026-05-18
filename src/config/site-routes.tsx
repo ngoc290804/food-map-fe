@@ -58,6 +58,7 @@ export const appRoutes: AppRouteItem[] = [
     meta: {
       title: 'Thông tin tài khoản',
       hidden: true,
+      requiresAuth: true,
       layout: 'main',
       breadcrumb: false,
     },

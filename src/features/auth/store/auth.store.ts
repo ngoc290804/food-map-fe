@@ -6,8 +6,11 @@ import { storage } from '@/utils/storage'
 
 export type UserInfo = {
   id: string
-  name: string
+  username: string
   email: string
+  fullName: string
+  status?: string
+  roles?: string[]
 }
 
 type AuthState = {

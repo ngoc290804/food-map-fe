@@ -10,4 +10,5 @@ export function saveAccessToken(token: string) {
 
 export function clearAuth() {
   localStorage.removeItem(STORAGE_KEY.ACCESS_TOKEN)
+  localStorage.removeItem(STORAGE_KEY.USER_PROFILE)
 }

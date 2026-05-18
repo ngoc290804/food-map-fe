@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ClockCircleOutlined, EnvironmentOutlined } from "@ant-design/icons";
+import {
+  ClockCircleOutlined,
+  EnvironmentOutlined,
+  SendOutlined,
+} from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
+  Button,
   Card,
   Col,
   Flex,
@@ -16,10 +21,12 @@ import {
   Typography,
 } from "antd";
 import dayjs from "dayjs";
+import "leaflet/dist/leaflet.css";
 import Gallery, {
   type PhotoProps,
   type RenderImageProps,
 } from "react-photo-gallery";
+import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import { useParams } from "react-router-dom";
 
 import KhungTrang from "@/components/common/KhungTrang";
@@ -29,6 +36,27 @@ import { restaurantService } from "@/features/restaurant/services/restaurant.ser
 type MenuPhoto = PhotoProps<{
   title?: string;
 }>;
+
+type MapPosition = [number, number];
+
+const defaultMapPosition: MapPosition = [21.028511, 105.804817];
+
+function RestaurantLocationMap({
+  position,
+}: {
+  position: MapPosition;
+}) {
+  return (
+    <MapContainer
+      center={position}
+      className="restaurant-detail__map"
+      zoom={15}
+    >
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <Marker position={position} />
+    </MapContainer>
+  );
+}
 
 function isRestaurantOpen(closeTime?: string) {
   const normalizedCloseTime = closeTime?.match(/^(\d{2}:\d{2})/)?.[1];
@@ -43,6 +71,15 @@ function isRestaurantOpen(closeTime?: string) {
   );
 
   return now.isBefore(closingAt) || now.isSame(closingAt);
+}
+
+function openGoogleMaps(address: string) {
+  const encodedAddress = encodeURIComponent(address);
+
+  window.open(
+    `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`,
+    "_blank",
+  );
 }
 
 function CuaHangDetailPage() {
@@ -150,7 +187,11 @@ function CuaHangDetailPage() {
     return (
       <KhungTrang title="Chi tiết cửa hàng">
         <Flex align="center" justify="center" style={{ minHeight: 280 }}>
-          <Spin tip="Đang tải thông tin cửa hàng..." />
+          <Spin>
+            <div style={{ paddingTop: 32 }}>
+              Đang tải thông tin cửa hàng...
+            </div>
+          </Spin>
         </Flex>
       </KhungTrang>
     );
@@ -168,120 +209,137 @@ function CuaHangDetailPage() {
   }
 
   const isOpen = isRestaurantOpen(restaurant.closeTime);
+  const mapPosition: MapPosition =
+    restaurant.latitude !== null && restaurant.longitude !== null
+      ? [restaurant.latitude, restaurant.longitude]
+      : defaultMapPosition;
 
   return (
     <KhungTrang
       subtitle={restaurant.address || "Thông tin chi tiết cửa hàng"}
       title={restaurant.name || "Chi tiết cửa hàng"}
     >
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <Card>
-            <Row gutter={[16, 16]}>
-              <Col md={9} span={24}>
-                {restaurant.imageUrl ? (
-                  <Image
-                    alt={restaurant.name}
-                    height={220}
-                    src={restaurant.imageUrl}
-                    style={{ objectFit: "cover", borderRadius: 8 }}
-                    width="100%"
-                  />
-                ) : (
-                  <Flex
-                    align="center"
-                    justify="center"
-                    style={{
-                      background: "#f5f5f5",
-                      borderRadius: 8,
-                      height: 220,
-                    }}
-                  >
-                    <Typography.Text type="secondary">
-                      Chưa có hình ảnh
-                    </Typography.Text>
-                  </Flex>
-                )}
-              </Col>
-              <Col md={15} span={24}>
-                <Space direction="vertical" size={12}>
-                  <Flex align="center" gap={8} wrap="wrap">
-                    <Typography.Title level={3} style={{ margin: 0 }}>
-                      {restaurant.name}
-                    </Typography.Title>
-                    <Tag color={isOpen ? "success" : "error"}>
-                      {isOpen ? "Còn mở cửa" : "Đã đóng cửa"}
-                    </Tag>
-                  </Flex>
-                  <Flex align="center" gap={8}>
-                    <ClockCircleOutlined />
-                    <Typography.Text>
-                      {restaurant.openTime || "--:--"} -{" "}
-                      {restaurant.closeTime || "--:--"}
-                    </Typography.Text>
-                  </Flex>
-                  <Flex align="start" gap={8}>
-                    <EnvironmentOutlined style={{ marginTop: 4 }} />
-                    <Typography.Text>{restaurant.address}</Typography.Text>
-                  </Flex>
+      <Row align="top" gutter={[16, 16]}>
+        <Col lg={15} span={24}>
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Card className="restaurant-detail__info-card">
+              <Row gutter={[16, 16]}>
+                <Col md={9} span={24}>
+                  {restaurant.imageUrl ? (
+                    <Image
+                      alt={restaurant.name}
+                      height={220}
+                      src={restaurant.imageUrl}
+                      style={{ objectFit: "cover", borderRadius: 8 }}
+                      width="100%"
+                    />
+                  ) : (
+                    <Flex
+                      align="center"
+                      justify="center"
+                      style={{
+                        background: "#f5f5f5",
+                        borderRadius: 8,
+                        height: 220,
+                      }}
+                    >
+                      <Typography.Text type="secondary">
+                        Chưa có hình ảnh
+                      </Typography.Text>
+                    </Flex>
+                  )}
+                </Col>
+                <Col md={15} span={24}>
+                  <Space direction="vertical" size={12}>
+                    <Flex align="center" gap={8} wrap="wrap">
+                      <Typography.Title level={3} style={{ margin: 0 }}>
+                        {restaurant.name}
+                      </Typography.Title>
+                      <Tag color={isOpen ? "success" : "error"}>
+                        {isOpen ? "Còn mở cửa" : "Đã đóng cửa"}
+                      </Tag>
+                    </Flex>
+                    <Flex align="center" gap={8}>
+                      <ClockCircleOutlined />
+                      <Typography.Text>
+                        {restaurant.openTime || "--:--"} -{" "}
+                        {restaurant.closeTime || "--:--"}
+                      </Typography.Text>
+                    </Flex>
+                    <Flex align="start" gap={8}>
+                      <EnvironmentOutlined style={{ marginTop: 4 }} />
+                      <Typography.Text>{restaurant.address}</Typography.Text>
+                    </Flex>
                   <Typography.Paragraph>
                     {restaurant.description || "Chưa có mô tả."}
                   </Typography.Paragraph>
                 </Space>
               </Col>
             </Row>
+              <Button
+                className="restaurant-detail__direction-button"
+                icon={<SendOutlined />}
+                type="primary"
+                onClick={() => openGoogleMaps(restaurant.address)}
+              >
+                Chỉ đường
+              </Button>
           </Card>
-        </Col>
-        <Col span={24}>
-          <Card loading={isMenuItemsLoading} title="Menu món ăn">
-            {isMenuItemsError ? (
-              <Alert
-                message="Không thể tải danh sách món ăn."
-                type="warning"
-              />
-            ) : menuItems.length > 0 ? (
-              <List
-                dataSource={menuItems}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      description={
-                        <Space direction="vertical" size={2}>
-                          <Typography.Text>
-                            {Number(item.price).toLocaleString("vi-VN")} đ
-                          </Typography.Text>
-                          <Typography.Text type="secondary">
-                            {item.mainIngredient}
-                          </Typography.Text>
-                        </Space>
-                      }
-                      title={
-                        <Flex align="center" justify="space-between" gap={8}>
-                          <Typography.Text strong>{item.name}</Typography.Text>
-                          <Tag color={item.available ? "success" : "error"}>
-                            {item.available ? "Còn bán" : "Hết hàng"}
-                          </Tag>
-                        </Flex>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+            <Card loading={isMenuItemsLoading} title="Menu món ăn">
+              {isMenuItemsError ? (
+                <Alert
+                  message="Không thể tải danh sách món ăn."
+                  type="warning"
+                />
+              ) : menuItems.length > 0 ? (
+                <List
+                  dataSource={menuItems}
+                  renderItem={(item) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        description={
+                          <Space direction="vertical" size={2}>
+                            <Typography.Text>
+                              {Number(item.price).toLocaleString("vi-VN")} đ
+                            </Typography.Text>
+                            <Typography.Text type="secondary">
+                              {item.mainIngredient}
+                            </Typography.Text>
+                          </Space>
+                        }
+                        title={
+                          <Flex align="center" justify="space-between" gap={8}>
+                            <Typography.Text strong>{item.name}</Typography.Text>
+                            <Tag color={item.available ? "success" : "error"}>
+                              {item.available ? "Còn bán" : "Hết hàng"}
+                            </Tag>
+                          </Flex>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
             ) : (
               <TrangThaiRong description="Chưa có món ăn để hiển thị." />
             )}
           </Card>
+          </Space>
+        </Col>
+        <Col lg={9} span={24}>
+          <Card className="restaurant-detail__map-card" title="Vị trí">
+            <RestaurantLocationMap position={mapPosition} />
+          </Card>
         </Col>
         {menuPhotos.length > 0 ? (
           <Col span={24}>
-            <Card title="Hình ảnh món ăn">
+            <Card className="restaurant-detail__gallery-card" title="Hình ảnh món ăn">
               <Gallery
                 direction="row"
                 margin={8}
                 photos={menuPhotos}
                 renderImage={renderMenuPhoto}
                 targetRowHeight={(containerWidth) =>
-                  containerWidth < 640 ? 120 : 150
+                  containerWidth < 640 ? 110 : 130
                 }
               />
             </Card>

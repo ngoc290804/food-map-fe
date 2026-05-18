@@ -17,6 +17,7 @@ import {
   FoodCategoryFilter,
   foodFilterMenuOptions,
 } from '@/config/food-filter.config'
+import { APP_AUTHORITIES } from '@/config/constants'
 
 const categoryIcons: Record<FoodCategoryFilter, ReactNode> = {
   [FoodCategoryFilter.HOME]: <HomeOutlined />,
@@ -28,8 +29,29 @@ const categoryIcons: Record<FoodCategoryFilter, ReactNode> = {
   [FoodCategoryFilter.FAVORITE]: <HeartOutlined />,
 }
 
-export function createAppMenuItems(onParentClick: (path: string) => void): MenuProps['items'] {
-  return [
+type CreateAppMenuItemsOptions = {
+  isAuthenticated?: boolean
+  roles?: string[]
+}
+
+function hasAdminRole(roles?: string[]) {
+  return (
+    roles?.some((role) => {
+      const normalizedRole = role.toLowerCase()
+
+      return (
+        normalizedRole === APP_AUTHORITIES.ADMIN ||
+        normalizedRole === `role_${APP_AUTHORITIES.ADMIN}`
+      )
+    }) ?? false
+  )
+}
+
+export function createAppMenuItems(
+  onParentClick: (path: string) => void,
+  options: CreateAppMenuItemsOptions = {},
+): MenuProps['items'] {
+  const items: MenuProps['items'] = [
     ...foodFilterMenuOptions.map((option) => ({
       key: option.path,
       icon: categoryIcons[option.value],
@@ -40,6 +62,11 @@ export function createAppMenuItems(onParentClick: (path: string) => void): MenuP
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
+            if (option.value === FoodCategoryFilter.FAVORITE && !options.isAuthenticated) {
+              onParentClick('/login')
+              return
+            }
+
             onParentClick(option.path)
           }}
         >
@@ -51,10 +78,15 @@ export function createAppMenuItems(onParentClick: (path: string) => void): MenuP
         label: child.label,
       })),
     })),
-    {
+  ]
+
+  if (hasAdminRole(options.roles)) {
+    items.push({
       key: '/quan-ly-quan-an',
       icon: <SettingOutlined />,
       label: 'Quản lý',
-    },
-  ]
+    })
+  }
+
+  return items
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
 import { DownOutlined, MoonOutlined, SunOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Flex, Menu, Space } from 'antd'
@@ -17,11 +17,12 @@ import {
 import { createAppMenuItems } from '@/config/menu.config'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useAppStore } from '@/store/app.store'
+import { getAccessToken } from '@/utils/token'
 
 function DauTrang() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, refreshUser, signOut } = useAuth()
   const appTheme = useAppStore((state) => state.theme)
   const toggleTheme = useAppStore((state) => state.toggleTheme)
 
@@ -32,19 +33,43 @@ function DauTrang() {
     ? `${location.pathname}?${FOOD_DETAIL_QUERY_KEY}=${selectedDetail.value}`
     : location.pathname
 
+  useEffect(() => {
+    if (getAccessToken() && !user) {
+      refreshUser().catch(() => undefined)
+    }
+  }, [refreshUser, user])
+
   const goToMenuFilter = useCallback(
     (key: string) => {
+      if (key === '/login') {
+        navigate('/login')
+        return
+      }
+
       const [pathname, rawSearch = ''] = key.split('?')
+
+      if (pathname === '/yeu-thich' && !user) {
+        navigate('/login')
+        return
+      }
+
       const nextParams = new URLSearchParams(rawSearch)
       nextParams.set(AREA_QUERY_KEY, selectedArea.value)
       const query = nextParams.toString()
 
       navigate(`${pathname}${query ? `?${query}` : ''}`)
     },
-    [navigate, selectedArea.value],
+    [navigate, selectedArea.value, user],
   )
 
-  const menuItems = useMemo(() => createAppMenuItems(goToMenuFilter), [goToMenuFilter])
+  const menuItems = useMemo(
+    () =>
+      createAppMenuItems(goToMenuFilter, {
+        isAuthenticated: Boolean(user),
+        roles: user?.roles,
+      }),
+    [goToMenuFilter, user],
+  )
   const areaMenuItems = useMemo(
     () => areaOptions.map((option) => ({ key: option.value, label: option.label })),
     [],
@@ -116,9 +141,14 @@ function DauTrang() {
               }}
               trigger={['hover', 'click']}
             >
-              <Button className="main-layout__login-button" icon={<UserOutlined />} size="large">
+              <Button
+                className="main-layout__login-button"
+                icon={<UserOutlined />}
+                size="large"
+                onClick={() => navigate('/profile')}
+              >
                 <Space>
-                  {user.name}
+                  {user.username || user.fullName || user.email}
                   <DownOutlined />
                 </Space>
               </Button>

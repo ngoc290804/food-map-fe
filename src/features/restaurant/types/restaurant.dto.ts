@@ -12,6 +12,8 @@ export type CuaHangVo = {
   moTa?: string | null;
   hinhAnh?: string | null;
   imagePublicId?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   trangThai?: string | null;
   loaiCuaHang?: FoodCategoryFilter | null;
   loaiKinhDoanh?: FoodDetailFilter | null;
@@ -26,6 +28,8 @@ export type RestaurantDto = {
   description: string;
   imageUrl: string | null;
   imagePublicId: string | null;
+  latitude: number | null;
+  longitude: number | null;
   status: string;
   loaiCuaHang?: FoodCategoryFilter;
   loaiKinhDoanh?: FoodDetailFilter;
