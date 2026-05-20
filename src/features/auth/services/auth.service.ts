@@ -22,6 +22,7 @@ export type RegisterPayload = {
   email: string
   fullName: string
   password: string
+  confirmPassword: string
 }
 
 export type LoginResponseDto = {

@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
+  HeartFilled,
+  HeartOutlined,
+  AimOutlined,
   RightOutlined,
   SearchOutlined,
+  StarFilled,
 } from "@ant-design/icons";
-import { Button, Flex, Input, Space, Typography } from "antd";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Alert, Button, Flex, Input, Space, Typography, message } from "antd";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import TheTrangThai from "@/components/common/TheTrangThai";
@@ -17,28 +23,51 @@ import {
   getAreaByValue,
   getFoodFilterByPath,
 } from "@/config/food-filter.config";
+import { favoriteService } from "@/features/restaurant/services/favorite.service";
+import {
+  buildDistanceCacheKey,
+  getCachedDistance,
+  getDrivingDistance,
+  saveCachedDistance,
+  type RouteDistance,
+} from "@/features/restaurant/services/distance.service";
 import { useRestaurantList } from "@/features/restaurant/hooks/useRestaurantList";
 import { useDebounce } from "@/hooks/useDebounce";
+import {
+  clearLocationPromptPending,
+  getUserSessionLocation,
+  hasLocationPromptPending,
+  saveUserSessionLocation,
+  type UserSessionLocation,
+} from "@/utils/session-location";
+import { getAccessToken } from "@/utils/token";
 
 function CuaHangListPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [messageApi, messageContextHolder] = message.useMessage();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState("");
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [userLocation, setUserLocation] = useState<UserSessionLocation | null>(
+    () => getUserSessionLocation(),
+  );
+  const [restaurantDistances, setRestaurantDistances] = useState<
+    Record<string, RouteDistance>
+  >({});
+  const requestedDistanceIds = useRef(new Set<string>());
   const debouncedKeyword = useDebounce(keyword);
   const currentCategory = getFoodFilterByPath(location.pathname);
   const isHomePage = currentCategory.value === FoodCategoryFilter.HOME;
   const currentDetail = currentCategory.children?.find(
     (option) => option.value === searchParams.get(FOOD_DETAIL_QUERY_KEY),
   );
-  const apiDetail = isHomePage
-    ? undefined
-    : (currentDetail ?? currentCategory.children?.[0]);
   const currentArea = getAreaByValue(searchParams.get(AREA_QUERY_KEY));
   const { data, isLoading } = useRestaurantList({
     keyword: debouncedKeyword,
     category: isHomePage ? undefined : currentCategory.value,
-    detail: apiDetail?.value,
+    detail: currentDetail?.value,
     page: 0,
     size: 10,
   });
@@ -48,8 +77,211 @@ function CuaHangListPage() {
     : `${currentCategory.description} Khu vực: ${currentArea.label}.`;
   const items = data?.items ?? [];
 
+  useEffect(() => {
+    setShowLocationPrompt(isHomePage && hasLocationPromptPending());
+  }, [isHomePage]);
+
+  useEffect(() => {
+    if (!userLocation || items.length === 0) {
+      return;
+    }
+
+    const origin = {
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+    };
+    const cachedDistances: Record<string, RouteDistance> = {};
+    const targetItems = items.filter((item) => {
+      if (
+        item.latitude === null ||
+        item.longitude === null ||
+        restaurantDistances[item.id] ||
+        requestedDistanceIds.current.has(item.id)
+      ) {
+        return false;
+      }
+
+      const destination = {
+        latitude: item.latitude,
+        longitude: item.longitude,
+      };
+      const cacheKey = buildDistanceCacheKey(item.id, origin, destination);
+      const cachedDistance = getCachedDistance(cacheKey);
+
+      if (cachedDistance) {
+        cachedDistances[item.id] = cachedDistance;
+
+        return false;
+      }
+
+      return true;
+    });
+
+    if (Object.keys(cachedDistances).length > 0) {
+      setRestaurantDistances((current) => ({
+        ...current,
+        ...cachedDistances,
+      }));
+    }
+
+    if (targetItems.length === 0) {
+      return;
+    }
+
+    let isActive = true;
+    targetItems.forEach((item) => requestedDistanceIds.current.add(item.id));
+
+    Promise.allSettled(
+      targetItems.map(async (item) => {
+        const destination = {
+          latitude: item.latitude ?? 0,
+          longitude: item.longitude ?? 0,
+        };
+        const distance = await getDrivingDistance(origin, destination);
+
+        saveCachedDistance(
+          buildDistanceCacheKey(item.id, origin, destination),
+          distance,
+        );
+
+        return {
+          restaurantId: item.id,
+          distance,
+        };
+      }),
+    ).then((results) => {
+      if (!isActive) {
+        return;
+      }
+
+      const nextDistances: Record<string, RouteDistance> = {};
+
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          nextDistances[result.value.restaurantId] = result.value.distance;
+        }
+      });
+
+      if (Object.keys(nextDistances).length > 0) {
+        setRestaurantDistances((current) => ({
+          ...current,
+          ...nextDistances,
+        }));
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [items, restaurantDistances, userLocation]);
+
+  const favoriteMutation = useMutation({
+    mutationFn: ({
+      favorite,
+      restaurantId,
+    }: {
+      favorite: boolean;
+      restaurantId: string;
+    }) =>
+      favorite
+        ? favoriteService.deleteByRestaurant(restaurantId)
+        : favoriteService.create({ idCuaHang: restaurantId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+    },
+    onError: () => {
+      messageApi.error("Không thể cập nhật yêu thích. Vui lòng thử lại.");
+    },
+  });
+
+  const openDetail = (restaurantId: string) => {
+    navigate(`/cua-hang/${restaurantId}`);
+  };
+
+  const handleCardKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    restaurantId: string,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openDetail(restaurantId);
+    }
+  };
+
+  const toggleFavorite = (restaurantId: string, favorite: boolean) => {
+    if (!getAccessToken()) {
+      navigate("/login");
+
+      return;
+    }
+
+    favoriteMutation.mutate({ favorite, restaurantId });
+  };
+
+  const dismissLocationPrompt = () => {
+    clearLocationPromptPending();
+    setShowLocationPrompt(false);
+  };
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      messageApi.warning("Trình duyệt không hỗ trợ lấy vị trí.");
+      dismissLocationPrompt();
+
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextLocation = {
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+          capturedAt: new Date().toISOString(),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        saveUserSessionLocation(nextLocation);
+        setUserLocation(nextLocation);
+        messageApi.success("Đã lưu vị trí tạm thời trong phiên đăng nhập.");
+        dismissLocationPrompt();
+      },
+      () => {
+        messageApi.warning("Không thể lấy vị trí. Bạn vẫn có thể sử dụng FoodMap bình thường.");
+        dismissLocationPrompt();
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 10_000,
+      },
+    );
+  };
+
   return (
     <Space direction="vertical" size={28} style={{ width: "100%" }}>
+      {messageContextHolder}
+      {showLocationPrompt ? (
+        <Alert
+          action={
+            <Space size={8}>
+              <Button size="small" onClick={dismissLocationPrompt}>
+                Không chia sẻ
+              </Button>
+              <Button size="small" type="primary" onClick={requestLocation}>
+                Chia sẻ vị trí
+              </Button>
+            </Space>
+          }
+          closable
+          description="FoodMap có thể dùng vị trí hiện tại để gợi ý quán ăn gần bạn trong phiên sử dụng này."
+          message="Bạn có muốn chia sẻ vị trí không?"
+          showIcon
+          type="info"
+          onClose={dismissLocationPrompt}
+        />
+      ) : null}
       <Flex align="center" justify="space-between" wrap="wrap">
         <div>
           <Typography.Title level={2} style={{ marginBottom: 6 }}>
@@ -74,12 +306,27 @@ function CuaHangListPage() {
 
       <div className="offer-list">
         {items.map((item) => (
-          <button
+          <div
             className="offer-card"
             key={item.id}
-            type="button"
-            onClick={() => navigate(`/cua-hang/${item.id}`)}
+            role="button"
+            tabIndex={0}
+            onClick={() => openDetail(item.id)}
+            onKeyDown={(event) => handleCardKeyDown(event, item.id)}
           >
+            <Button
+              aria-label={item.favorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+              className={`favorite-button ${item.favorite ? "favorite-button--active" : ""}`}
+              icon={item.favorite ? <HeartFilled /> : <HeartOutlined />}
+              loading={favoriteMutation.isPending}
+              shape="circle"
+              type="text"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFavorite(item.id, item.favorite);
+              }}
+            />
             <span
               className={`offer-card__badge offer-card__badge--${
                 item.status === "ACTIVE" ? "green" : "gray"
@@ -120,11 +367,33 @@ function CuaHangListPage() {
                   {item.address}
                 </Typography.Text>
               </Flex>
+              {restaurantDistances[item.id] ? (
+                <Flex align="center" className="offer-card__distance" gap={6}>
+                  <AimOutlined />
+                  <Typography.Text>
+                    Cách bạn{" "}
+                    <Typography.Text strong>
+                      {restaurantDistances[item.id].distanceKm.toFixed(1)} km
+                    </Typography.Text>
+                  </Typography.Text>
+                </Flex>
+              ) : null}
+              <Flex align="center" className="offer-card__rating" gap={6}>
+                <StarFilled />
+                <Typography.Text strong>
+                  {item.averageRating > 0 ? item.averageRating.toFixed(1) : "Chưa có đánh giá"}
+                </Typography.Text>
+                {item.reviewCount > 0 ? (
+                  <Typography.Text type="secondary">
+                    ({item.reviewCount})
+                  </Typography.Text>
+                ) : null}
+              </Flex>
             </div>
             <div className="offer-card__footer">
               <span>Mở cửa đến {item.closeTime}</span>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 

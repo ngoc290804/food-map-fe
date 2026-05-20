@@ -7,9 +7,15 @@ import {
   type RegisterPayload,
   type UserInfoDto,
 } from '@/features/auth/services/auth.service'
+import { clearDistanceCache } from '@/features/restaurant/services/distance.service'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { clearUserLocationSessionData } from '@/utils/session-location'
 import { storage } from '@/utils/storage'
 import { saveAccessToken } from '@/utils/token'
+
+type AuthActionOptions = {
+  redirect?: boolean
+}
 
 function saveUser(user: UserInfoDto) {
   storage.set(STORAGE_KEY.USER_PROFILE, user)
@@ -25,18 +31,28 @@ export function useAuth() {
     setUser(nextUser)
   }
 
-  const signIn = async (values: LoginPayload) => {
+  const signIn = async (values: LoginPayload, options: AuthActionOptions = {}) => {
     const response = await authService.login(values)
 
     applyAuthenticatedUser(response.accessToken, response.user)
-    navigate('/', { replace: true })
+
+    if (options.redirect !== false) {
+      navigate('/', { replace: true })
+    }
+
+    return response
   }
 
-  const signUp = async (values: RegisterPayload) => {
+  const signUp = async (values: RegisterPayload, options: AuthActionOptions = {}) => {
     const response = await authService.register(values)
 
     applyAuthenticatedUser(response.accessToken, response.user)
-    navigate('/', { replace: true })
+
+    if (options.redirect !== false) {
+      navigate('/', { replace: true })
+    }
+
+    return response
   }
 
   const refreshUser = async () => {
@@ -49,6 +65,8 @@ export function useAuth() {
   }
 
   const signOut = () => {
+    clearUserLocationSessionData()
+    clearDistanceCache()
     logout()
     navigate('/', { replace: true })
   }

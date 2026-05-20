@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type UIEvent } from "react";
 
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
+  HeartFilled,
+  HeartOutlined,
   SendOutlined,
+  StarFilled,
 } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
@@ -13,12 +16,16 @@ import {
   Col,
   Flex,
   Image,
+  Input,
   List,
+  Modal,
+  Rate,
   Row,
   Space,
   Spin,
   Tag,
   Typography,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import "leaflet/dist/leaflet.css";
@@ -27,11 +34,17 @@ import Gallery, {
   type RenderImageProps,
 } from "react-photo-gallery";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import KhungTrang from "@/components/common/KhungTrang";
 import TrangThaiRong from "@/components/common/TrangThaiRong";
+import { favoriteService } from "@/features/restaurant/services/favorite.service";
 import { restaurantService } from "@/features/restaurant/services/restaurant.service";
+import {
+  reviewService,
+  type RestaurantReview,
+} from "@/features/restaurant/services/review.service";
+import { getAccessToken } from "@/utils/token";
 
 type MenuPhoto = PhotoProps<{
   title?: string;
@@ -40,6 +53,36 @@ type MenuPhoto = PhotoProps<{
 type MapPosition = [number, number];
 
 const defaultMapPosition: MapPosition = [21.028511, 105.804817];
+
+const previewReviewSize = 3;
+const modalReviewPageSize = 10;
+
+class ReviewBloomFilter {
+  private readonly bits = new Uint8Array(2048);
+
+  add(value: string) {
+    this.getHashes(value).forEach((hash) => {
+      this.bits[hash] = 1;
+    });
+  }
+
+  has(value: string) {
+    return this.getHashes(value).every((hash) => this.bits[hash] === 1);
+  }
+
+  private getHashes(value: string) {
+    let hashA = 0;
+    let hashB = 5381;
+
+    for (let index = 0; index < value.length; index += 1) {
+      const code = value.charCodeAt(index);
+      hashA = (hashA * 31 + code) % this.bits.length;
+      hashB = ((hashB << 5) + hashB + code) % this.bits.length;
+    }
+
+    return [hashA, hashB, (hashA + hashB) % this.bits.length];
+  }
+}
 
 function RestaurantLocationMap({
   position,
@@ -84,6 +127,9 @@ function openGoogleMaps(address: string) {
 
 function CuaHangDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [messageApi, messageContextHolder] = message.useMessage();
   const restaurantId = id ?? "";
   const {
     data: restaurant,
@@ -103,9 +149,71 @@ function CuaHangDetailPage() {
     queryKey: ["restaurant-menu-items", restaurantId],
     queryFn: () => restaurantService.getMenuItems(restaurantId),
   });
+  const {
+    data: reviewPreview,
+    isLoading: isReviewsLoading,
+  } = useQuery({
+    enabled: Boolean(restaurantId),
+    queryKey: ["restaurant-reviews", restaurantId, "preview"],
+    queryFn: () =>
+      reviewService.getByRestaurant(restaurantId, {
+        page: 0,
+        size: previewReviewSize,
+      }),
+  });
   const [menuImageSizes, setMenuImageSizes] = useState<
     Record<string, { width: number; height: number }>
   >({});
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [modalReviews, setModalReviews] = useState<RestaurantReview[]>([]);
+  const [modalReviewPage, setModalReviewPage] = useState(0);
+  const [modalReviewTotalPages, setModalReviewTotalPages] = useState(0);
+  const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false);
+  const [reviewBloomFilter, setReviewBloomFilter] = useState(
+    () => new ReviewBloomFilter(),
+  );
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState("");
+  const favoriteMutation = useMutation({
+    mutationFn: ({
+      favorite,
+      restaurantId,
+    }: {
+      favorite: boolean;
+      restaurantId: string;
+    }) =>
+      favorite
+        ? favoriteService.deleteByRestaurant(restaurantId)
+        : favoriteService.create({ idCuaHang: restaurantId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["restaurant-detail", restaurantId] });
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+    },
+    onError: () => {
+      messageApi.error("Không thể cập nhật yêu thích. Vui lòng thử lại.");
+    },
+  });
+  const createReviewMutation = useMutation({
+    mutationFn: () =>
+      reviewService.createByRestaurant(restaurantId, {
+        danhGia: reviewContent.trim(),
+        diemDanhGia: reviewRating,
+      }),
+    onSuccess: (createdReview) => {
+      queryClient.invalidateQueries({ queryKey: ["restaurant-reviews", restaurantId] });
+      setReviewContent("");
+      setReviewRating(5);
+      messageApi.success("Đã gửi đánh giá.");
+
+      if (isReviewModalOpen && !reviewBloomFilter.has(createdReview.id)) {
+        reviewBloomFilter.add(createdReview.id);
+        setModalReviews((currentReviews) => [createdReview, ...currentReviews]);
+      }
+    },
+    onError: () => {
+      messageApi.error("Không thể gửi đánh giá. Vui lòng thử lại.");
+    },
+  });
 
   useEffect(() => {
     menuItems.forEach((item) => {
@@ -175,6 +283,130 @@ function CuaHangDetailPage() {
     </div>
   );
 
+  const previewReviews = reviewPreview?.reviews ?? [];
+  const reviewAverageRating = Number(reviewPreview?.averageRating ?? 0);
+  const reviewTitle = (
+    <Flex align="center" className="restaurant-detail__review-title" gap={8}>
+      <Typography.Text strong>Đánh giá</Typography.Text>
+      <Flex align="center" className="restaurant-detail__review-title-score" gap={4}>
+        <Typography.Text strong>
+          {reviewAverageRating > 0 ? reviewAverageRating.toFixed(1) : "0.0"}
+        </Typography.Text>
+        <StarFilled />
+      </Flex>
+    </Flex>
+  );
+
+  const formatReviewDate = (value: string) => {
+    if (!value) {
+      return "";
+    }
+
+    const parsedDate = dayjs(value);
+
+    return parsedDate.isValid() ? parsedDate.format("DD/MM/YYYY HH:mm") : value;
+  };
+
+  const appendModalReviews = (
+    nextReviews: RestaurantReview[],
+    bloomFilter = reviewBloomFilter,
+  ) => {
+    const uniqueReviews = nextReviews.filter((review) => {
+      if (bloomFilter.has(review.id)) {
+        return false;
+      }
+
+      bloomFilter.add(review.id);
+
+      return true;
+    });
+
+    if (uniqueReviews.length > 0) {
+      setModalReviews((currentReviews) => [...currentReviews, ...uniqueReviews]);
+    }
+  };
+
+  const openReviewModal = async () => {
+    const nextBloomFilter = new ReviewBloomFilter();
+
+    setReviewBloomFilter(nextBloomFilter);
+    setModalReviews([]);
+    setModalReviewPage(0);
+    setModalReviewTotalPages(0);
+    setIsReviewModalOpen(true);
+    setIsLoadingMoreReviews(true);
+
+    try {
+      const firstPage = await reviewService.getByRestaurant(restaurantId, {
+        page: 0,
+        size: modalReviewPageSize,
+      });
+
+      appendModalReviews(firstPage.reviews, nextBloomFilter);
+      setModalReviewPage(firstPage.page + 1);
+      setModalReviewTotalPages(firstPage.totalPages);
+    } catch {
+      messageApi.error("Không thể tải danh sách đánh giá.");
+    } finally {
+      setIsLoadingMoreReviews(false);
+    }
+  };
+
+  const loadMoreReviews = async () => {
+    if (
+      isLoadingMoreReviews ||
+      modalReviewPage >= modalReviewTotalPages ||
+      !restaurantId
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreReviews(true);
+
+    try {
+      const nextPage = await reviewService.getByRestaurant(restaurantId, {
+        page: modalReviewPage,
+        size: modalReviewPageSize,
+      });
+
+      appendModalReviews(nextPage.reviews);
+      setModalReviewPage(nextPage.page + 1);
+      setModalReviewTotalPages(nextPage.totalPages);
+    } catch {
+      messageApi.error("Không thể tải thêm đánh giá.");
+    } finally {
+      setIsLoadingMoreReviews(false);
+    }
+  };
+
+  const handleReviewModalScroll = (event: UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const distanceToBottom =
+      target.scrollHeight - target.scrollTop - target.clientHeight;
+
+    if (distanceToBottom < 96) {
+      loadMoreReviews();
+    }
+  };
+
+  const handleSubmitReview = () => {
+    const normalizedContent = reviewContent.trim();
+
+    if (!normalizedContent) {
+      messageApi.warning("Vui lòng nhập nội dung đánh giá.");
+
+      return;
+    }
+
+    if (!getAccessToken()) {
+      navigate("/login");
+
+      return;
+    }
+
+    createReviewMutation.mutate();
+  };
+
   if (!restaurantId) {
     return (
       <KhungTrang title="Chi tiết cửa hàng">
@@ -219,10 +451,33 @@ function CuaHangDetailPage() {
       subtitle={restaurant.address || "Thông tin chi tiết cửa hàng"}
       title={restaurant.name || "Chi tiết cửa hàng"}
     >
+      {messageContextHolder}
       <Row align="top" gutter={[16, 16]}>
         <Col lg={15} span={24}>
           <Space direction="vertical" size={16} style={{ width: "100%" }}>
             <Card className="restaurant-detail__info-card">
+              <Button
+                aria-label={restaurant.favorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+                className={`favorite-button restaurant-detail__favorite-button ${
+                  restaurant.favorite ? "favorite-button--active" : ""
+                }`}
+                icon={restaurant.favorite ? <HeartFilled /> : <HeartOutlined />}
+                loading={favoriteMutation.isPending}
+                shape="circle"
+                type="text"
+                onClick={() => {
+                  if (!getAccessToken()) {
+                    navigate("/login");
+
+                    return;
+                  }
+
+                  favoriteMutation.mutate({
+                    favorite: restaurant.favorite,
+                    restaurantId: restaurant.id,
+                  });
+                }}
+              />
               <Row gutter={[16, 16]}>
                 <Col md={9} span={24}>
                   {restaurant.imageUrl ? (
@@ -345,7 +600,108 @@ function CuaHangDetailPage() {
             </Card>
           </Col>
         ) : null}
+        <Col span={24}>
+          <Card className="restaurant-detail__review-card" title={reviewTitle}>
+            <Space direction="vertical" size={18} style={{ width: "100%" }}>
+              {isReviewsLoading ? (
+                <Spin>
+                  <div className="restaurant-detail__review-loading">
+                    Đang tải đánh giá...
+                  </div>
+                </Spin>
+              ) : previewReviews.length > 0 ? (
+                <div className="restaurant-detail__review-list">
+                  {previewReviews.map((review) => (
+                    <div className="restaurant-detail__review-item" key={review.id}>
+                      <Flex align="start" justify="space-between" gap={12}>
+                        <Space direction="vertical" size={4}>
+                          <Typography.Text strong>{review.author}</Typography.Text>
+                          <Rate disabled value={review.rating} />
+                        </Space>
+                        <Typography.Text type="secondary">
+                          {formatReviewDate(review.createdAt)}
+                        </Typography.Text>
+                      </Flex>
+                      <Typography.Paragraph className="restaurant-detail__review-content">
+                        {review.content}
+                      </Typography.Paragraph>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <TrangThaiRong description="Chưa có đánh giá nào." />
+              )}
+              {(reviewPreview?.totalElements ?? 0) > previewReviewSize ? (
+                <Button
+                  className="restaurant-detail__show-reviews-button"
+                  type="text"
+                  onClick={openReviewModal}
+                >
+                  Hiển thị tất cả
+                </Button>
+              ) : null}
+              <div className="restaurant-detail__review-form">
+                <Rate value={reviewRating} onChange={setReviewRating} />
+                <Input
+                  className="restaurant-detail__review-input"
+                  placeholder="Nhập đánh giá của bạn"
+                  value={reviewContent}
+                  onChange={(event) => setReviewContent(event.target.value)}
+                  onPressEnter={handleSubmitReview}
+                />
+                <Button
+                  aria-label="Gửi đánh giá"
+                  className="restaurant-detail__review-submit"
+                  icon={<SendOutlined />}
+                  loading={createReviewMutation.isPending}
+                  shape="circle"
+                  type="primary"
+                  onClick={handleSubmitReview}
+                />
+              </div>
+            </Space>
+          </Card>
+        </Col>
       </Row>
+      <Modal
+        centered
+        footer={null}
+        open={isReviewModalOpen}
+        title="Tất cả đánh giá"
+        width={720}
+        onCancel={() => setIsReviewModalOpen(false)}
+      >
+        <div
+          className="restaurant-detail__review-modal-list"
+          onScroll={handleReviewModalScroll}
+        >
+          {modalReviews.length > 0 ? (
+            modalReviews.map((review) => (
+              <div className="restaurant-detail__review-item" key={review.id}>
+                <Flex align="start" justify="space-between" gap={12}>
+                  <Space direction="vertical" size={4}>
+                    <Typography.Text strong>{review.author}</Typography.Text>
+                    <Rate disabled value={review.rating} />
+                  </Space>
+                  <Typography.Text type="secondary">
+                    {formatReviewDate(review.createdAt)}
+                  </Typography.Text>
+                </Flex>
+                <Typography.Paragraph className="restaurant-detail__review-content">
+                  {review.content}
+                </Typography.Paragraph>
+              </div>
+            ))
+          ) : !isLoadingMoreReviews ? (
+            <TrangThaiRong description="Chưa có đánh giá nào." />
+          ) : null}
+          {isLoadingMoreReviews ? (
+            <Flex justify="center" className="restaurant-detail__review-more-loading">
+              <Spin />
+            </Flex>
+          ) : null}
+        </div>
+      </Modal>
     </KhungTrang>
   );
 }

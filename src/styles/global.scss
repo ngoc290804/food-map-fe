@@ -311,6 +311,37 @@ body {
   transform: translateY(-2px);
 }
 
+.favorite-button.ant-btn {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+  color: #4b5563;
+  display: inline-flex;
+  font-size: 1.3rem;
+  height: 42px;
+  justify-content: center;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 42px;
+  z-index: 3;
+}
+
+.favorite-button.ant-btn:hover,
+.favorite-button.ant-btn:focus-visible {
+  background: #fff;
+  color: #ef6f7b;
+}
+
+.favorite-button--active.ant-btn,
+.favorite-button--active.ant-btn:hover,
+.favorite-button--active.ant-btn:focus-visible {
+  background: #fff1f3;
+  border-color: #ffc9d1;
+  color: #ef6f7b;
+}
+
 .offer-card__badge {
   border: 4px solid var(--app-surface);
   border-radius: 999px;
@@ -356,6 +387,26 @@ body {
 .offer-card__address {
   color: var(--app-text-subtle);
   margin-top: 0.35rem;
+}
+
+.offer-card__distance {
+  color: var(--app-text-muted);
+  margin-top: 0.45rem;
+}
+
+.offer-card__distance .anticon {
+  color: #14b8a6;
+  font-size: 1rem;
+}
+
+.offer-card__rating {
+  color: var(--app-text-muted);
+  margin-top: 0.45rem;
+}
+
+.offer-card__rating .anticon {
+  color: #f59e0b;
+  font-size: 1rem;
 }
 
 .offer-card__time {
@@ -416,6 +467,11 @@ body {
   position: relative;
 }
 
+.restaurant-detail__favorite-button.ant-btn {
+  right: 1rem;
+  top: 1rem;
+}
+
 .restaurant-detail__direction-button.ant-btn {
   bottom: 1rem;
   position: absolute;
@@ -465,6 +521,98 @@ body {
   font-weight: 600;
   margin-top: 8px;
   max-width: 100%;
+}
+
+.restaurant-detail__review-title {
+  min-width: 0;
+}
+
+.restaurant-detail__review-title-score {
+  color: #f59e0b;
+}
+
+.restaurant-detail__review-title-score .ant-typography {
+  color: inherit;
+}
+
+.restaurant-detail__review-title-score .anticon {
+  color: #f59e0b;
+  font-size: 1rem;
+}
+
+.restaurant-detail__review-list {
+  display: grid;
+  gap: 12px;
+}
+
+.restaurant-detail__review-item {
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.restaurant-detail__review-item .ant-rate {
+  color: #f59e0b;
+  font-size: 1rem;
+}
+
+.restaurant-detail__review-content.ant-typography {
+  color: var(--app-text-muted);
+  margin: 0.7rem 0 0;
+}
+
+.restaurant-detail__review-loading {
+  min-height: 96px;
+  padding-top: 32px;
+  text-align: center;
+}
+
+.restaurant-detail__show-reviews-button.ant-btn {
+  align-self: flex-start;
+  color: #ef4f3f;
+  font-weight: 600;
+  padding-inline: 0;
+}
+
+.restaurant-detail__review-form {
+  align-items: center;
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.75rem;
+}
+
+.restaurant-detail__review-form .ant-rate {
+  color: #f59e0b;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.restaurant-detail__review-input.ant-input {
+  background: var(--app-surface);
+  border-radius: 8px;
+}
+
+.restaurant-detail__review-submit.ant-btn {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.restaurant-detail__review-modal-list {
+  display: grid;
+  gap: 12px;
+  max-height: min(68vh, 620px);
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.restaurant-detail__review-more-loading {
+  padding: 12px 0 4px;
 }
 
 .restaurant-management__footer {
@@ -627,6 +775,14 @@ body {
 @media (max-width: 768px) {
   .offer-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .restaurant-detail__review-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .restaurant-detail__review-form .ant-rate {
+    grid-column: 1 / -1;
   }
 }
 

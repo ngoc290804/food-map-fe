@@ -252,6 +252,21 @@ function buildMenuItemPayload(
   };
 }
 
+function getRestaurantFormValues(item: RestaurantManageItem): RestaurantFormValues {
+  return {
+    name: item.name,
+    address: item.address,
+    description: item.description,
+    imageUrl: item.imageUrl ?? "",
+    imagePublicId: item.imagePublicId,
+    category: item.category,
+    detail: item.detail,
+    openTime: timeToDayjs(item.openTime),
+    closeTime: timeToDayjs(item.closeTime),
+    active: item.active,
+  };
+}
+
 function QuanLyCuaHangPage() {
   const queryClient = useQueryClient();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -476,19 +491,12 @@ function QuanLyCuaHangPage() {
       return;
     }
 
-    restaurantForm.setFieldsValue({
-      name: selectedRestaurant.name,
-      address: selectedRestaurant.address,
-      description: selectedRestaurant.description,
-      imageUrl: selectedRestaurant.imageUrl ?? "",
-      imagePublicId: selectedRestaurant.imagePublicId,
-      category: selectedRestaurant.category,
-      detail: selectedRestaurant.detail,
-      openTime: timeToDayjs(selectedRestaurant.openTime),
-      closeTime: timeToDayjs(selectedRestaurant.closeTime),
-      active: selectedRestaurant.active,
-    });
-  }, [restaurantForm, restaurantModalOpen, selectedRestaurant]);
+    if (isCreatingRestaurant) {
+      return;
+    }
+
+    restaurantForm.setFieldsValue(getRestaurantFormValues(selectedRestaurant));
+  }, [isCreatingRestaurant, restaurantForm, restaurantModalOpen, selectedRestaurant]);
 
   const restaurantColumns: TableProps<RestaurantManageItem>["columns"] = [
     {
@@ -634,10 +642,13 @@ function QuanLyCuaHangPage() {
   };
 
   const openCreateRestaurantForm = () => {
+    const emptyRestaurant = createEmptyRestaurant();
+
     setMenuListError(false);
     setRestaurantImageFile(null);
     restaurantForm.resetFields();
-    setSelectedRestaurant(createEmptyRestaurant());
+    restaurantForm.setFieldsValue(getRestaurantFormValues(emptyRestaurant));
+    setSelectedRestaurant(emptyRestaurant);
     setIsCreatingRestaurant(true);
     setRestaurantModalOpen(true);
   };

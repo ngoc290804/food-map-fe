@@ -14,6 +14,9 @@ export type CuaHangVo = {
   imagePublicId?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
+  yeuThich?: boolean | null;
+  diemDanhGiaTrungBinh?: number | string | null;
+  soLuongDanhGia?: number | null;
   trangThai?: string | null;
   loaiCuaHang?: FoodCategoryFilter | null;
   loaiKinhDoanh?: FoodDetailFilter | null;
@@ -30,6 +33,9 @@ export type RestaurantDto = {
   imagePublicId: string | null;
   latitude: number | null;
   longitude: number | null;
+  favorite: boolean;
+  averageRating: number;
+  reviewCount: number;
   status: string;
   loaiCuaHang?: FoodCategoryFilter;
   loaiKinhDoanh?: FoodDetailFilter;

@@ -84,11 +84,11 @@ export const foodFilterMenuOptions: FoodFilterMenuOption[] = [
     label: 'Trang chủ',
     path: '/',
     description: 'Gợi ý nổi bật và ưu đãi mới nhất quanh bạn.',
-    children: [
-      { value: FoodDetailFilter.SUGGESTED_TODAY, label: 'Gợi ý hôm nay' },
-      { value: FoodDetailFilter.NEARBY, label: 'Gần bạn' },
-      { value: FoodDetailFilter.OPEN_NOW, label: 'Đang mở cửa' },
-    ],
+    // children: [
+    //   { value: FoodDetailFilter.SUGGESTED_TODAY, label: 'Gợi ý hôm nay' },
+    //   { value: FoodDetailFilter.NEARBY, label: 'Gần bạn' },
+    //   { value: FoodDetailFilter.OPEN_NOW, label: 'Đang mở cửa' },
+    // ],
   },
   {
     value: FoodCategoryFilter.RESTAURANT,
@@ -154,7 +154,7 @@ export const foodFilterMenuOptions: FoodFilterMenuOption[] = [
       { value: FoodDetailFilter.SKEWER, label: 'Xiên que' },
       { value: FoodDetailFilter.SWEET_SOUP, label: 'Chè' },
       { value: FoodDetailFilter.ICE_CREAM, label: 'Kem' },
-      { value: FoodDetailFilter.KOREAN_SNACK, label: 'Ăn vặt Hàn Quốc' },
+      { value: FoodDetailFilter.KOREAN_SNACK, label: 'Ăn vặt' },
     ],
   },
   {

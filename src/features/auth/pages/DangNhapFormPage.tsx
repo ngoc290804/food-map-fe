@@ -4,6 +4,7 @@ import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Card, Form, Input, Space, Tabs, Typography, message } from 'antd'
 import type { TabsProps } from 'antd'
 import { AxiosError } from 'axios'
+import { useNavigate } from 'react-router-dom'
 
 import { env } from '@/config/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -11,6 +12,7 @@ import type {
   LoginPayload,
   RegisterPayload,
 } from '@/features/auth/services/auth.service'
+import { markLocationPromptPending } from '@/utils/session-location'
 
 function getErrorMessage(error: unknown) {
   if (error instanceof AxiosError) {
@@ -24,14 +26,17 @@ function getErrorMessage(error: unknown) {
 
 function DangNhapFormPage() {
   const { signIn, signUp } = useAuth()
+  const navigate = useNavigate()
   const [messageApi, messageContextHolder] = message.useMessage()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleLogin = async (values: LoginPayload) => {
     try {
       setIsSubmitting(true)
-      await signIn(values)
+      await signIn(values, { redirect: false })
+      markLocationPromptPending()
       messageApi.success('Đăng nhập thành công')
+      navigate('/', { replace: true })
     } catch (error) {
       messageApi.error(getErrorMessage(error))
     } finally {
@@ -39,7 +44,7 @@ function DangNhapFormPage() {
     }
   }
 
-  const handleRegister = async (values: RegisterPayload & { confirmPassword: string }) => {
+  const handleRegister = async (values: RegisterPayload) => {
     try {
       setIsSubmitting(true)
       await signUp(values)
