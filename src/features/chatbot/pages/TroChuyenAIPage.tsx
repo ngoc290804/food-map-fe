@@ -1,50 +1,38 @@
-import { Button, Card, Col, Input, Row, Space, Tag } from 'antd'
+import { Card, Col, Row, Space, Tag, Typography } from "antd";
 
-import KhungTrang from '@/components/common/KhungTrang'
-import KhungHoiThoai from '@/features/chatbot/components/KhungHoiThoai'
-
-const messages = [
-  {
-    id: '1',
-    role: 'assistant' as const,
-    content: 'Tôi có thể gợi ý quán ăn theo khu vực, mức giá và sở thích của bạn.',
-  },
-  {
-    id: '2',
-    role: 'user' as const,
-    content: 'Tìm giúp tôi quán bún bò gần trung tâm và mở sau 22h.',
-  },
-]
+import KhungTrang from "@/components/common/KhungTrang";
+import ChatbotPanel from "@/features/chatbot/components/ChatbotPanel";
 
 function TroChuyenAIPage() {
   return (
     <KhungTrang
-      subtitle="Module AI/chatbot để kết nối backend gợi ý dữ liệu trong đồ án."
+      subtitle="Hỏi FoodMap AI để tìm quán theo món, khu vực, giờ mở cửa hoặc mức đánh giá."
       title="AI Chatbot"
     >
       <Row gutter={[16, 16]}>
         <Col lg={16} span={24}>
           <Card title="Hội thoại">
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <KhungHoiThoai messages={messages} />
-              <Input.TextArea placeholder="Nhập câu hỏi..." rows={4} />
-              <Button type="primary">Gửi câu hỏi</Button>
-            </Space>
+            <ChatbotPanel />
           </Card>
         </Col>
         <Col lg={8} span={24}>
-          <Card title="Gợi ý nhanh">
-            <Space size={[8, 8]} wrap>
+          <Card title="Gợi ý lệnh">
+            <Space direction="vertical" size={12}>
+              <Typography.Text type="secondary">
+                Nên hỏi rõ món, khu vực, thời gian hoặc nhu cầu để kết quả sát hơn.
+              </Typography.Text>
+              <Space size={[8, 8]} wrap>
               <Tag color="gold">Quán gần đây</Tag>
               <Tag color="blue">Món nổi bật</Tag>
               <Tag color="green">Đang mở cửa</Tag>
               <Tag color="purple">Theo ngân sách</Tag>
+              </Space>
             </Space>
           </Card>
         </Col>
       </Row>
     </KhungTrang>
-  )
+  );
 }
 
-export default TroChuyenAIPage
+export default TroChuyenAIPage;

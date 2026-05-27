@@ -728,6 +728,49 @@ body {
   padding: 0.75rem;
 }
 
+.chatbot-panel {
+  width: 100%;
+}
+
+.chatbot-panel__messages {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chatbot-panel__message {
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  max-width: 92%;
+  padding: 0.75rem;
+}
+
+.chatbot-panel__message--user {
+  justify-self: end;
+}
+
+.chatbot-panel__message--assistant {
+  justify-self: start;
+}
+
+.chatbot-panel__message-content.ant-typography {
+  margin-bottom: 0;
+  margin-top: 6px;
+  white-space: pre-line;
+}
+
+.chatbot-panel__restaurant {
+  background: var(--app-surface);
+}
+
+.chatbot-panel__restaurant-address.ant-typography {
+  color: var(--app-text-muted);
+  margin: 4px 0 6px;
+}
+
 @media (max-width: 1200px) {
   .offer-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
