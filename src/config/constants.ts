@@ -2,5 +2,6 @@ export const DEFAULT_PAGE_SIZE = 10
 
 export const APP_AUTHORITIES = {
   ADMIN: 'admin',
-  USER: 'user',
+  CUSTOMER: 'khach',
+  STORE_OWNER: 'cuaHang',
 } as const

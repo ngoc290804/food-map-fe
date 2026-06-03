@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Input, Space, Tabs, Typography, message } from 'antd'
+import { Button, Card, Form, Input, Select, Space, Tabs, Typography, message } from 'antd'
 import type { TabsProps } from 'antd'
 import { AxiosError } from 'axios'
 import { useNavigate } from 'react-router-dom'
@@ -13,6 +13,11 @@ import type {
   RegisterPayload,
 } from '@/features/auth/services/auth.service'
 import { markLocationPromptPending } from '@/utils/session-location'
+
+const accountTypeOptions: { label: string; value: RegisterPayload['phanQuyen'] }[] = [
+  { label: 'Khách hàng', value: 'khach' },
+  { label: 'Chủ cửa hàng', value: 'cuaHang' },
+]
 
 function getErrorMessage(error: unknown) {
   if (error instanceof AxiosError) {
@@ -86,7 +91,7 @@ function DangNhapFormPage() {
       key: 'register',
       label: 'Đăng ký',
       children: (
-        <Form layout="vertical" onFinish={handleRegister}>
+        <Form initialValues={{ phanQuyen: 'khach' }} layout="vertical" onFinish={handleRegister}>
           <Form.Item
             label="Tên đăng nhập"
             name="username"
@@ -110,6 +115,13 @@ function DangNhapFormPage() {
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder="ban@foodmap.local" />
+          </Form.Item>
+          <Form.Item
+            label="Loại tài khoản"
+            name="phanQuyen"
+            rules={[{ required: true, message: 'Vui lòng chọn loại tài khoản' }]}
+          >
+            <Select options={accountTypeOptions} placeholder="Chọn loại tài khoản" />
           </Form.Item>
           <Form.Item
             label="Mật khẩu"

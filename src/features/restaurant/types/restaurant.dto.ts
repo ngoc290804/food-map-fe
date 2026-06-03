@@ -17,6 +17,7 @@ export type CuaHangVo = {
   yeuThich?: boolean | null;
   diemDanhGiaTrungBinh?: number | string | null;
   soLuongDanhGia?: number | null;
+  idChuCuaHang?: string | null;
   trangThai?: string | null;
   loaiCuaHang?: FoodCategoryFilter | null;
   loaiKinhDoanh?: FoodDetailFilter | null;
@@ -36,6 +37,7 @@ export type RestaurantDto = {
   favorite: boolean;
   averageRating: number;
   reviewCount: number;
+  ownerId: string | null;
   status: string;
   loaiCuaHang?: FoodCategoryFilter;
   loaiKinhDoanh?: FoodDetailFilter;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type UIEvent } from "react";
 
 import {
   ClockCircleOutlined,
+  CheckCircleOutlined,
   EnvironmentOutlined,
   HeartFilled,
   HeartOutlined,
@@ -9,6 +10,7 @@ import {
   StarFilled,
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import {
   Alert,
   Button,
@@ -38,12 +40,19 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import KhungTrang from "@/components/common/KhungTrang";
 import TrangThaiRong from "@/components/common/TrangThaiRong";
+import { checkInService } from "@/features/restaurant/services/check-in.service";
 import { favoriteService } from "@/features/restaurant/services/favorite.service";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 import { restaurantService } from "@/features/restaurant/services/restaurant.service";
 import {
   reviewService,
   type RestaurantReview,
 } from "@/features/restaurant/services/review.service";
+import {
+  getUserSessionLocation,
+  saveUserSessionLocation,
+  type UserSessionLocation,
+} from "@/utils/session-location";
 import { getAccessToken } from "@/utils/token";
 
 type MenuPhoto = PhotoProps<{
@@ -125,10 +134,68 @@ function openGoogleMaps(address: string) {
   );
 }
 
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Trình duyệt không hỗ trợ lấy vị trí."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      maximumAge: 60_000,
+      timeout: 10_000,
+    });
+  });
+}
+
+async function getCurrentSessionLocation(): Promise<UserSessionLocation> {
+  const cachedLocation = getUserSessionLocation();
+
+  if (cachedLocation) {
+    return cachedLocation;
+  }
+
+  const position = await getCurrentPosition();
+  const location = {
+    accuracy: Number.isFinite(position.coords.accuracy)
+      ? position.coords.accuracy
+      : null,
+    capturedAt: new Date().toISOString(),
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+  };
+
+  saveUserSessionLocation(location);
+
+  return location;
+}
+
+function getGeolocationErrorMessage(error: unknown) {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = Number((error as GeolocationPositionError).code);
+
+    if (code === 1) {
+      return "Bạn cần cho phép trình duyệt truy cập vị trí để check-in.";
+    }
+
+    if (code === 2) {
+      return "Không thể xác định vị trí hiện tại. Vui lòng thử lại.";
+    }
+
+    if (code === 3) {
+      return "Lấy vị trí hiện tại quá lâu. Vui lòng thử lại.";
+    }
+  }
+
+  return null;
+}
+
 function CuaHangDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
   const [messageApi, messageContextHolder] = message.useMessage();
   const restaurantId = id ?? "";
   const {
@@ -159,6 +226,17 @@ function CuaHangDetailPage() {
       reviewService.getByRestaurant(restaurantId, {
         page: 0,
         size: previewReviewSize,
+      }),
+  });
+  const {
+    data: currentUserReviewPage,
+  } = useQuery({
+    enabled: Boolean(restaurantId && user?.id && getAccessToken()),
+    queryKey: ["restaurant-reviews", restaurantId, "current-user", user?.id],
+    queryFn: () =>
+      reviewService.getByRestaurant(restaurantId, {
+        page: 0,
+        size: 1000,
       }),
   });
   const [menuImageSizes, setMenuImageSizes] = useState<
@@ -193,14 +271,59 @@ function CuaHangDetailPage() {
       messageApi.error("Không thể cập nhật yêu thích. Vui lòng thử lại.");
     },
   });
+  const checkInMutation = useMutation({
+    mutationFn: async () => {
+      const location = await getCurrentSessionLocation();
+
+      return checkInService.checkIn({
+        idQuanAn: restaurantId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+    },
+    onSuccess: (result) => {
+      const checkIn = result.data;
+      const distanceText =
+        checkIn.khoangCachMet !== null && checkIn.khoangCachMet !== undefined
+          ? ` Khoảng cách: ${checkIn.khoangCachMet.toFixed(1)}m.`
+          : "";
+
+      messageApi.success(`${result.message || "Check-in thành công"}.${distanceText}`);
+    },
+    onError: (error) => {
+      if (error instanceof AxiosError) {
+        const responseData = error.response?.data as { message?: string } | undefined;
+
+        messageApi.error(responseData?.message || "Không thể check-in. Vui lòng thử lại.");
+        return;
+      }
+
+      const geolocationMessage = getGeolocationErrorMessage(error);
+
+      if (geolocationMessage) {
+        messageApi.error(geolocationMessage);
+        return;
+      }
+
+      if (error instanceof Error && error.message) {
+        messageApi.error(error.message);
+        return;
+      }
+
+      messageApi.error("Không thể check-in. Vui lòng thử lại.");
+    },
+  });
   const createReviewMutation = useMutation({
     mutationFn: () =>
       reviewService.createByRestaurant(restaurantId, {
         danhGia: reviewContent.trim(),
         diemDanhGia: reviewRating,
-      }),
+    }),
     onSuccess: (createdReview) => {
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews", restaurantId] });
+      queryClient.invalidateQueries({
+        queryKey: ["restaurant-reviews", restaurantId, "current-user", user?.id],
+      });
       setReviewContent("");
       setReviewRating(5);
       messageApi.success("Đã gửi đánh giá.");
@@ -284,6 +407,9 @@ function CuaHangDetailPage() {
   );
 
   const previewReviews = reviewPreview?.reviews ?? [];
+  const hasCurrentUserReviewed =
+    currentUserReviewPage?.reviews.some((review) => review.userId === user?.id) ??
+    false;
   const reviewAverageRating = Number(reviewPreview?.averageRating ?? 0);
   const reviewTitle = (
     <Flex align="center" className="restaurant-detail__review-title" gap={8}>
@@ -531,14 +657,30 @@ function CuaHangDetailPage() {
                 </Space>
               </Col>
             </Row>
-              <Button
-                className="restaurant-detail__direction-button"
-                icon={<SendOutlined />}
-                type="primary"
-                onClick={() => openGoogleMaps(restaurant.address)}
-              >
-                Chỉ đường
-              </Button>
+              <Space className="restaurant-detail__action-buttons" wrap>
+                <Button
+                  icon={<CheckCircleOutlined />}
+                  loading={checkInMutation.isPending}
+                  onClick={() => {
+                    if (!getAccessToken()) {
+                      navigate("/login");
+
+                      return;
+                    }
+
+                    checkInMutation.mutate();
+                  }}
+                >
+                  Check-in
+                </Button>
+                <Button
+                  icon={<SendOutlined />}
+                  type="primary"
+                  onClick={() => openGoogleMaps(restaurant.address)}
+                >
+                  Chỉ đường
+                </Button>
+              </Space>
           </Card>
             <Card loading={isMenuItemsLoading} title="Menu món ăn">
               {isMenuItemsError ? (
@@ -640,25 +782,27 @@ function CuaHangDetailPage() {
                   Hiển thị tất cả
                 </Button>
               ) : null}
-              <div className="restaurant-detail__review-form">
-                <Rate value={reviewRating} onChange={setReviewRating} />
-                <Input
-                  className="restaurant-detail__review-input"
-                  placeholder="Nhập đánh giá của bạn"
-                  value={reviewContent}
-                  onChange={(event) => setReviewContent(event.target.value)}
-                  onPressEnter={handleSubmitReview}
-                />
-                <Button
-                  aria-label="Gửi đánh giá"
-                  className="restaurant-detail__review-submit"
-                  icon={<SendOutlined />}
-                  loading={createReviewMutation.isPending}
-                  shape="circle"
-                  type="primary"
-                  onClick={handleSubmitReview}
-                />
-              </div>
+              {!hasCurrentUserReviewed ? (
+                <div className="restaurant-detail__review-form">
+                  <Rate value={reviewRating} onChange={setReviewRating} />
+                  <Input
+                    className="restaurant-detail__review-input"
+                    placeholder="Nhập đánh giá của bạn"
+                    value={reviewContent}
+                    onChange={(event) => setReviewContent(event.target.value)}
+                    onPressEnter={handleSubmitReview}
+                  />
+                  <Button
+                    aria-label="Gửi đánh giá"
+                    className="restaurant-detail__review-submit"
+                    icon={<SendOutlined />}
+                    loading={createReviewMutation.isPending}
+                    shape="circle"
+                    type="primary"
+                    onClick={handleSubmitReview}
+                  />
+                </div>
+              ) : null}
             </Space>
           </Card>
         </Col>

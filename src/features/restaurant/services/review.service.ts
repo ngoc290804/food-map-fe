@@ -27,6 +27,7 @@ export type RestaurantReviewListVo = {
 
 export type RestaurantReview = {
   id: string;
+  userId: string | null;
   author: string;
   content: string;
   rating: number;
@@ -50,6 +51,7 @@ export type ReviewCreatePayload = {
 function normalizeReview(item: ReviewVo): RestaurantReview {
   return {
     id: item.id,
+    userId: item.idTaiKhoan ?? null,
     author: item.tenTaiKhoan || "Người dùng",
     content: item.danhGia || "",
     rating: Number(item.diemDanhGia ?? 0),

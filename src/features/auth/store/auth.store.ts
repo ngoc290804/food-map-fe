@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { STORAGE_KEY } from '@/config/storage-key'
+import type { AccountType } from '@/features/auth/services/auth.service'
 import { clearAuth } from '@/utils/token'
 import { storage } from '@/utils/storage'
 
@@ -10,6 +11,7 @@ export type UserInfo = {
   email: string
   fullName: string
   status?: string
+  loaiTaiKhoan?: AccountType
   roles?: string[]
 }
 

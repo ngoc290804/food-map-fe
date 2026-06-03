@@ -6,4 +6,5 @@ export const endpoints = {
   reviews: '/reviews',
   uploads: '/uploads',
   chatbot: '/chatbot',
+  checkIns: '/check-ins',
 } as const

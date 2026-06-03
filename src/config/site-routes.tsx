@@ -1,6 +1,6 @@
 import { lazy } from 'react'
 
-import { foodFilterMenuOptions } from '@/config/food-filter.config'
+import { FoodCategoryFilter, foodFilterMenuOptions } from '@/config/food-filter.config'
 import type { AppRouteItem } from '@/types/route.type'
 
 const CuaHangListPage = lazy(
@@ -9,6 +9,9 @@ const CuaHangListPage = lazy(
 const CuaHangDetailPage = lazy(
   () => import('@/features/restaurant/pages/CuaHangDetailPage'),
 )
+const BangXepHangPage = lazy(
+  () => import('@/features/restaurant/pages/BangXepHangPage'),
+)
 const QuanLyCuaHangPage = lazy(
   () => import('@/features/restaurant/pages/QuanLyCuaHangPage'),
 )
@@ -16,19 +19,32 @@ const DangNhapFormPage = lazy(() => import('@/features/auth/pages/DangNhapFormPa
 const TaiKhoanDetailPage = lazy(() => import('@/features/auth/pages/TaiKhoanDetailPage'))
 const KhongTimThayPage = lazy(() => import('@/features/system/pages/KhongTimThayPage'))
 
-const categoryRoutes: AppRouteItem[] = foodFilterMenuOptions.map((option) => ({
-  key: option.value,
-  path: option.path,
-  element: CuaHangListPage,
-  meta: {
-    title: option.label,
-    layout: 'main',
-    breadcrumb: false,
-  },
-}))
+const categoryRoutes: AppRouteItem[] = foodFilterMenuOptions
+  .filter((option) => option.value !== FoodCategoryFilter.RANKING)
+  .map((option) => ({
+    key: option.value,
+    path: option.path,
+    element: CuaHangListPage,
+    meta: {
+      title: option.label,
+      layout: 'main',
+      breadcrumb: false,
+    },
+  }))
 
 export const appRoutes: AppRouteItem[] = [
   ...categoryRoutes,
+  {
+    key: 'ranking',
+    path: '/bang-xep-hang',
+    element: BangXepHangPage,
+    meta: {
+      title: 'Bảng xếp hạng',
+      hidden: true,
+      layout: 'main',
+      breadcrumb: false,
+    },
+  },
   {
     key: 'restaurant-management',
     path: '/quan-ly-quan-an',
@@ -36,6 +52,7 @@ export const appRoutes: AppRouteItem[] = [
     meta: {
       title: 'Quản lý quán ăn',
       hidden: true,
+      requiresAuth: true,
       layout: 'main',
       breadcrumb: false,
     },

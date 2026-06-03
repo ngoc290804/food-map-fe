@@ -5,6 +5,7 @@ export const FoodCategoryFilter = {
   DRINK: 'TRA_SUA_DO_UONG',
   CAFE: 'CAFE',
   DESSERT_SNACK: 'BANH_NGOT_AN_VAT',
+  RANKING: 'BANG_XEP_HANG',
   FAVORITE: 'YEU_THICH',
 } as const
 
@@ -156,6 +157,12 @@ export const foodFilterMenuOptions: FoodFilterMenuOption[] = [
       { value: FoodDetailFilter.ICE_CREAM, label: 'Kem' },
       { value: FoodDetailFilter.KOREAN_SNACK, label: 'Ăn vặt' },
     ],
+  },
+  {
+    value: FoodCategoryFilter.RANKING,
+    label: 'Bảng xếp hạng',
+    path: '/bang-xep-hang',
+    description: 'Các quán ăn được sắp xếp theo điểm đánh giá và lượt đánh giá.',
   },
   {
     value: FoodCategoryFilter.FAVORITE,

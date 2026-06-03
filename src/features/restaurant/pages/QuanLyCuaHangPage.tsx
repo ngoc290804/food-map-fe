@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import {
   DeleteOutlined,
   EditOutlined,
@@ -37,13 +38,14 @@ import Gallery, {
   type RenderImageProps,
 } from "react-photo-gallery";
 
-import { DEFAULT_PAGE_SIZE } from "@/config/constants";
+import { APP_AUTHORITIES, DEFAULT_PAGE_SIZE } from "@/config/constants";
 import {
   FoodCategoryFilter,
   FoodDetailFilter,
   foodFilterMenuOptions,
 } from "@/config/food-filter.config";
 import { useRestaurantList } from "@/features/restaurant/hooks/useRestaurantList";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 import {
   type MenuItemPayload,
   restaurantService,
@@ -70,6 +72,7 @@ type MenuManageItem = {
 
 type RestaurantManageItem = {
   id: string;
+  ownerId: string | null;
   name: string;
   address: string;
   description: string;
@@ -113,6 +116,7 @@ function createEmptyRestaurant(): RestaurantManageItem {
 
   return {
     id: `restaurant-${Date.now()}`,
+    ownerId: null,
     name: "",
     address: "",
     description: "",
@@ -199,6 +203,7 @@ function mapRestaurantDtoToManageItem(
 
   return {
     id: item.id,
+    ownerId: item.ownerId,
     name: item.name,
     address: item.address,
     description: item.description,
@@ -267,8 +272,26 @@ function getRestaurantFormValues(item: RestaurantManageItem): RestaurantFormValu
   };
 }
 
+function hasRole(roles: string[] | undefined, role: string) {
+  const normalizedRole = role.toLowerCase();
+
+  return (
+    roles?.some((item) => {
+      const normalizedItem = item.toLowerCase();
+
+      return normalizedItem === normalizedRole || normalizedItem === `role_${normalizedRole}`;
+    }) ?? false
+  );
+}
+
+function isNotFoundError(error: unknown) {
+  return error instanceof AxiosError && error.response?.status === 404;
+}
+
 function QuanLyCuaHangPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const isStoreOwnerMode = hasRole(user?.roles, APP_AUTHORITIES.STORE_OWNER);
   const [messageApi, messageContextHolder] = message.useMessage();
   const [restaurantForm] = Form.useForm<RestaurantFormValues>();
   const [menuForm] = Form.useForm<MenuFormValues>();
@@ -279,7 +302,26 @@ function QuanLyCuaHangPage() {
     useRestaurantList({
       page: restaurantPage - 1,
       size: restaurantPageSize,
+      enabled: !isStoreOwnerMode,
     });
+  const {
+    data: ownerRestaurant,
+    isLoading: isOwnerRestaurantLoading,
+  } = useQuery({
+    enabled: isStoreOwnerMode,
+    queryKey: ["restaurant-mine"],
+    queryFn: async () => {
+      try {
+        return await restaurantService.getMyRestaurant();
+      } catch (error) {
+        if (isNotFoundError(error)) {
+          return null;
+        }
+
+        throw error;
+      }
+    },
+  });
   const restaurantRows = useMemo(
     () =>
       restaurantData?.items.map(mapRestaurantDtoToManageItem) ??
@@ -302,6 +344,9 @@ function QuanLyCuaHangPage() {
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
   const [menuListError, setMenuListError] = useState(false);
   const selectedRestaurantId = selectedRestaurant?.id;
+  const menuRestaurantId = isStoreOwnerMode
+    ? ownerRestaurant?.id
+    : selectedRestaurantId;
   const selectedCategory =
     Form.useWatch("category", restaurantForm) ??
     selectedRestaurant?.category ??
@@ -335,13 +380,18 @@ function QuanLyCuaHangPage() {
   const deleteMenuItemMutation = useMutation({
     mutationFn: (id: string) => restaurantService.deleteMenuItem(id),
   });
-  const { data: fetchedMenuItems = [], isLoading: isMenuItemsLoading } =
-    useQuery({
+  const {
+    data: fetchedMenuItems = [],
+    error: menuItemsError,
+    isLoading: isMenuItemsLoading,
+  } = useQuery({
       enabled: Boolean(
-        selectedRestaurantId && restaurantModalOpen && !isCreatingRestaurant,
+        menuRestaurantId &&
+          (restaurantModalOpen || isStoreOwnerMode) &&
+          !isCreatingRestaurant,
       ),
-      queryKey: ["restaurant-menu-items", selectedRestaurantId],
-      queryFn: () => restaurantService.getMenuItems(selectedRestaurantId ?? ""),
+      queryKey: ["restaurant-menu-items", menuRestaurantId],
+      queryFn: () => restaurantService.getMenuItems(menuRestaurantId ?? ""),
     });
   const isSavingRestaurant =
     createRestaurantMutation.isPending || updateRestaurantMutation.isPending;
@@ -398,6 +448,12 @@ function QuanLyCuaHangPage() {
       image.src = item.imageUrl;
     });
   }, [menuImageSizes, selectedMenuImages]);
+
+  useEffect(() => {
+    if (menuItemsError) {
+      messageApi.error("Không thể tải danh sách món ăn của quán.");
+    }
+  }, [menuItemsError, messageApi]);
 
   const renderMenuGalleryPhoto = ({
     index,
@@ -487,7 +543,36 @@ function QuanLyCuaHangPage() {
   }, [restaurantRows]);
 
   useEffect(() => {
-    if (!selectedRestaurant || !restaurantModalOpen) {
+    if (!isStoreOwnerMode || isOwnerRestaurantLoading) {
+      return;
+    }
+
+    setMenuListError(false);
+    setRestaurantImageFile(null);
+
+    if (ownerRestaurant) {
+      const nextRestaurant = mapRestaurantDtoToManageItem(ownerRestaurant);
+
+      setSelectedRestaurant(nextRestaurant);
+      setIsCreatingRestaurant(false);
+      restaurantForm.setFieldsValue(getRestaurantFormValues(nextRestaurant));
+      return;
+    }
+
+    const emptyRestaurant = createEmptyRestaurant();
+
+    setSelectedRestaurant(emptyRestaurant);
+    setIsCreatingRestaurant(true);
+    restaurantForm.setFieldsValue(getRestaurantFormValues(emptyRestaurant));
+  }, [
+    isOwnerRestaurantLoading,
+    isStoreOwnerMode,
+    ownerRestaurant,
+    restaurantForm,
+  ]);
+
+  useEffect(() => {
+    if (!selectedRestaurant || (!restaurantModalOpen && !isStoreOwnerMode)) {
       return;
     }
 
@@ -819,10 +904,13 @@ function QuanLyCuaHangPage() {
     const values = await restaurantForm.validateFields();
 
     try {
+      let savedRestaurant: RestaurantDto;
+
       if (isCreatingRestaurant) {
         const createdRestaurant = await createRestaurantMutation.mutateAsync(
           buildRestaurantPayload(values, undefined, restaurantImageFile),
         );
+        savedRestaurant = createdRestaurant;
         await Promise.all(
           selectedRestaurant.menuItems.map(async (item) => {
             const uploadedImage = item.imageFile
@@ -845,7 +933,7 @@ function QuanLyCuaHangPage() {
         );
         messageApi.success("Đã thêm quán ăn");
       } else {
-        await updateRestaurantMutation.mutateAsync({
+        savedRestaurant = await updateRestaurantMutation.mutateAsync({
           id: selectedRestaurant.id,
           payload: buildRestaurantPayload(
             values,
@@ -857,6 +945,17 @@ function QuanLyCuaHangPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+      await queryClient.invalidateQueries({ queryKey: ["restaurant-mine"] });
+      if (isStoreOwnerMode) {
+        const nextRestaurant = mapRestaurantDtoToManageItem(savedRestaurant);
+
+        setSelectedRestaurant(nextRestaurant);
+        setIsCreatingRestaurant(false);
+        setRestaurantImageFile(null);
+        restaurantForm.setFieldsValue(getRestaurantFormValues(nextRestaurant));
+        return;
+      }
+
       closeRestaurantModal();
     } catch {
       messageApi.error("Không thể lưu quán ăn. Vui lòng thử lại.");
@@ -878,10 +977,254 @@ function QuanLyCuaHangPage() {
     }
   };
 
+  const restaurantEditor = selectedRestaurant ? (
+    <>
+      <Form form={restaurantForm} layout="vertical">
+        <Form.Item
+          label="Tên quán"
+          name="name"
+          rules={[
+            { required: true, message: "Vui lòng nhập tên quán" },
+          ]}
+        >
+          <Input placeholder="Nhập tên quán" />
+        </Form.Item>
+        <Form.Item
+          label="Địa chỉ"
+          name="address"
+          rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+        >
+          <Input placeholder="Nhập địa chỉ" />
+        </Form.Item>
+        <Form.Item label="Mô tả" name="description">
+          <Input.TextArea placeholder="Nhập mô tả ngắn" rows={3} />
+        </Form.Item>
+        <Form.Item hidden name="imageUrl">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="imagePublicId">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Hình ảnh quán">
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Space wrap>
+              <Upload
+                accept="image/*"
+                beforeUpload={selectRestaurantImage}
+                maxCount={1}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />}>
+                  {imageUrlPreview ? "Thay đổi hình ảnh" : "Chọn hình ảnh"}
+                </Button>
+              </Upload>
+              {imageUrlPreview ? (
+                <Button onClick={removeRestaurantImage}>Xóa hình ảnh</Button>
+              ) : null}
+            </Space>
+            <Typography.Text type="secondary">
+              Chọn file ảnh từ máy tính. Ảnh sẽ được hiển thị trước khi lưu.
+            </Typography.Text>
+          </Space>
+        </Form.Item>
+        {imageUrlPreview ? (
+          <Image
+            alt="Hình ảnh quán"
+            height={180}
+            src={imageUrlPreview}
+            style={{
+              borderRadius: 8,
+              marginBottom: 16,
+              objectFit: "cover",
+            }}
+            width="100%"
+          />
+        ) : null}
+        <Row gutter={12}>
+          <Col sm={12} span={24}>
+            <Form.Item
+              label="Nhóm chính"
+              name="category"
+              rules={[{ required: true, message: "Chọn nhóm chính" }]}
+            >
+              <Select
+                options={categoryOptions}
+                placeholder="Chọn nhóm chính"
+                onChange={(value: FoodCategoryFilter) => {
+                  restaurantForm.setFieldValue(
+                    "detail",
+                    getCategoryDetailOptions(value)[0]?.value,
+                  );
+                }}
+              />
+            </Form.Item>
+          </Col>
+          <Col sm={12} span={24}>
+            <Form.Item
+              label="Nhóm chi tiết"
+              name="detail"
+              rules={[
+                { required: true, message: "Chọn nhóm chi tiết" },
+              ]}
+            >
+              <Select
+                disabled={detailOptions.length === 0}
+                options={detailOptions}
+                placeholder="Chọn nhóm chi tiết"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={12}>
+          <Col sm={12} span={24}>
+            <Form.Item
+              label="Giờ mở cửa"
+              name="openTime"
+              rules={[{ required: true, message: "Chọn giờ mở cửa" }]}
+            >
+              <TimePicker format="HH:mm" style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+          <Col sm={12} span={24}>
+            <Form.Item
+              label="Giờ đóng cửa"
+              name="closeTime"
+              rules={[{ required: true, message: "Chọn giờ đóng cửa" }]}
+            >
+              <TimePicker format="HH:mm" style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item name="active" valuePropName="checked">
+          <Checkbox>Còn hoạt động</Checkbox>
+        </Form.Item>
+      </Form>
+
+      <Flex
+        align="center"
+        className="restaurant-management__menu-toolbar"
+        justify="space-between"
+      >
+        <Typography.Title level={4}>Menu quán</Typography.Title>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={openCreateMenuModal}
+        >
+          Thêm món ăn
+        </Button>
+      </Flex>
+      <Table
+        columns={menuColumns}
+        dataSource={selectedMenuItems}
+        loading={isMenuItemsLoading}
+        pagination={false}
+        rowKey="id"
+        scroll={{ x: 720 }}
+        size="small"
+      />
+      {menuListError ? (
+        <Typography.Text
+          className="restaurant-management__menu-error"
+          type="danger"
+        >
+          Vui lòng thêm ít nhất 1 món ăn trước khi lưu quán mới.
+        </Typography.Text>
+      ) : null}
+
+      <Card
+        className="restaurant-management__image-card"
+        size="small"
+        title="Ảnh món vừa thêm"
+      >
+        {menuGalleryPhotos.length > 0 ? (
+          <Gallery
+            direction="row"
+            margin={8}
+            photos={menuGalleryPhotos}
+            renderImage={renderMenuGalleryPhoto}
+            targetRowHeight={(containerWidth) =>
+              containerWidth < 640 ? 120 : 150
+            }
+          />
+        ) : (
+          <Typography.Text type="secondary">
+            Chưa có ảnh món ăn nào được chọn.
+          </Typography.Text>
+        )}
+      </Card>
+
+      <div className="restaurant-management__footer">
+        <Button
+          loading={isSavingRestaurant}
+          type="primary"
+          onClick={saveRestaurant}
+        >
+          Lưu
+        </Button>
+        {isCreatingRestaurant ? (
+          !isStoreOwnerMode ? (
+            <Button
+              disabled={isSavingRestaurant}
+              onClick={closeRestaurantModal}
+            >
+              Hủy
+            </Button>
+          ) : null
+        ) : (
+          <>
+            {!isStoreOwnerMode ? (
+              <Button
+                disabled={isSavingRestaurant || isDeletingRestaurant}
+                onClick={closeRestaurantModal}
+              >
+                Đóng
+              </Button>
+            ) : null}
+            {!isStoreOwnerMode ? (
+              <Popconfirm
+                cancelText="Hủy"
+                okText="Xóa"
+                title="Xóa quán ăn này?"
+                onConfirm={deleteRestaurant}
+              >
+                <Button danger loading={isDeletingRestaurant}>
+                  Xóa
+                </Button>
+              </Popconfirm>
+            ) : null}
+          </>
+        )}
+      </div>
+    </>
+  ) : null;
+
   return (
     <>
       {messageContextHolder}
       <Space className="restaurant-management" direction="vertical" size={20}>
+        {isStoreOwnerMode ? (
+          <>
+            <Flex align="center" justify="space-between" wrap="wrap">
+              <div>
+                <Typography.Title level={2} style={{ marginBottom: 6 }}>
+                  Quản lý quán ăn của bạn
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  Cập nhật thông tin quán và menu món ăn đang kinh doanh.
+                </Typography.Text>
+              </div>
+            </Flex>
+
+            <Card
+              loading={isOwnerRestaurantLoading}
+              title={isCreatingRestaurant ? "Thêm mới quán ăn" : "Chi tiết quán ăn"}
+            >
+              {restaurantEditor}
+            </Card>
+          </>
+        ) : (
+          <>
         <Flex align="center" justify="space-between" wrap="wrap">
           <div>
             <Typography.Title level={2} style={{ marginBottom: 6 }}>
@@ -1151,6 +1494,8 @@ function QuanLyCuaHangPage() {
             </>
           ) : null}
         </Modal>
+          </>
+        )}
 
         <Modal
           destroyOnHidden

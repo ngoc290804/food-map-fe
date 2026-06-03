@@ -17,6 +17,7 @@ export function useRestaurantList(params?: RestaurantListParams) {
       params?.page,
       params?.size,
     ],
+    enabled: params?.enabled ?? true,
     queryFn: () =>
       restaurantService.getList({
         ...params,

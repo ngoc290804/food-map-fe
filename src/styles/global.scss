@@ -295,7 +295,7 @@ body {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  height: 360px;
+  height: 392px;
   overflow: hidden;
   padding: 0;
   position: relative;
@@ -373,6 +373,7 @@ body {
 .offer-card__body {
   border-top: 1px solid var(--app-border);
   flex: 1;
+  min-height: 0;
   padding: 0.8rem 0.85rem 0.65rem;
 }
 
@@ -425,10 +426,168 @@ body {
   border-top: 1px solid var(--app-border);
   color: var(--app-text);
   display: flex;
+  flex: 0 0 auto;
   font-size: 0.86rem;
   font-weight: 500;
   gap: 0.65rem;
   padding: 0.75rem 0.85rem;
+}
+
+.leaderboard-page {
+  width: 100%;
+}
+
+.leaderboard-page__title {
+  color: #6b1731;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.leaderboard-page__title h1.ant-typography {
+  color: #6b1731;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 0;
+  text-shadow:
+    2px 2px 0 #f7d756,
+    4px 4px 0 rgba(107, 23, 49, 0.18);
+}
+
+.leaderboard-page__title .anticon {
+  color: #f7c948;
+  filter: drop-shadow(2px 3px 0 rgba(107, 23, 49, 0.35));
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.leaderboard-page__grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+}
+
+.leaderboard-panel {
+  background: #f4d34f;
+  border: 6px solid #6b1731;
+  border-radius: 8px;
+  box-shadow: 10px 10px 0 #4b1026;
+  min-height: 540px;
+  padding: 22px;
+}
+
+.leaderboard-panel--empty {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 42%),
+    #f4d34f;
+}
+
+.leaderboard-panel__head {
+  margin-bottom: 18px;
+}
+
+.leaderboard-panel__head h3.ant-typography {
+  color: #6b1731;
+  font-size: 1.45rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.leaderboard-panel__head .ant-typography {
+  color: #6b1731;
+  font-weight: 700;
+}
+
+.leaderboard-table {
+  display: grid;
+  gap: 12px;
+}
+
+.leaderboard-table__header,
+.leaderboard-table__row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 64px minmax(0, 1fr) 116px;
+}
+
+.leaderboard-table--checkin .leaderboard-table__header,
+.leaderboard-table--checkin .leaderboard-table__row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 84px;
+}
+
+.leaderboard-table__header {
+  color: #6b1731;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0 12px;
+  text-transform: uppercase;
+}
+
+.leaderboard-table__row {
+  min-height: 54px;
+}
+
+.leaderboard-table__rank {
+  color: #6b1731;
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.leaderboard-table__cell {
+  align-items: center;
+  background: #6b1731;
+  border-radius: 6px;
+  color: #f9dd55;
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 800;
+  height: 44px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-table__name.ant-btn {
+  background: #6b1731;
+  border-radius: 6px;
+  color: #f9dd55;
+  font-size: 1rem;
+  font-weight: 800;
+  height: 44px;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding: 0 16px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-table__name.ant-btn:hover,
+.leaderboard-table__name.ant-btn:focus-visible {
+  background: #7e1d3b;
+  color: #fff3a0;
+}
+
+.leaderboard-table__score {
+  align-items: center;
+  background: #6b1731;
+  border-radius: 6px;
+  color: #f9dd55;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 800;
+  height: 44px;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.leaderboard-table__state {
+  color: #6b1731;
+  font-weight: 700;
+  padding: 12px;
 }
 
 .restaurant-management {
@@ -472,7 +631,7 @@ body {
   top: 1rem;
 }
 
-.restaurant-detail__direction-button.ant-btn {
+.restaurant-detail__action-buttons {
   bottom: 1rem;
   position: absolute;
   right: 1rem;
@@ -778,6 +937,14 @@ body {
 }
 
 @media (max-width: 992px) {
+  .leaderboard-page__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .leaderboard-panel {
+    min-height: 360px;
+  }
+
   .restaurant-detail__map-card {
     position: static;
   }
@@ -816,6 +983,31 @@ body {
 }
 
 @media (max-width: 768px) {
+  .leaderboard-panel {
+    box-shadow: 6px 6px 0 #4b1026;
+    padding: 14px;
+  }
+
+  .leaderboard-table__header,
+  .leaderboard-table__row {
+    grid-template-columns: 44px minmax(0, 1fr) 84px;
+  }
+
+  .leaderboard-table--checkin .leaderboard-table__header,
+  .leaderboard-table--checkin .leaderboard-table__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px;
+  }
+
+  .leaderboard-table__name.ant-btn,
+  .leaderboard-table__cell,
+  .leaderboard-table__score {
+    font-size: 0.9rem;
+  }
+
+  .leaderboard-table__rank {
+    font-size: 1.4rem;
+  }
+
   .offer-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -850,7 +1042,7 @@ body {
   }
 
   .offer-card {
-    height: 360px;
+    height: 392px;
   }
 
   .chatbot-widget__trigger {

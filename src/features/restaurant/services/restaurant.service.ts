@@ -21,6 +21,7 @@ export type RestaurantListParams = {
   detail?: FoodDetailFilter;
   page?: number;
   size?: number;
+  enabled?: boolean;
 };
 
 export type RestaurantPayload = {
@@ -81,6 +82,7 @@ function normalizeRestaurant(item?: CuaHangVo | null): RestaurantDto {
     favorite: item?.yeuThich ?? false,
     averageRating: Number(item?.diemDanhGiaTrungBinh ?? 0),
     reviewCount: Number(item?.soLuongDanhGia ?? 0),
+    ownerId: item?.idChuCuaHang ?? null,
     status: item?.trangThai ?? "ACTIVE",
     loaiCuaHang: item?.loaiCuaHang ?? undefined,
     loaiKinhDoanh: item?.loaiKinhDoanh ?? undefined,
@@ -132,27 +134,56 @@ function buildRestaurantFormData(payload: RestaurantPayload) {
   return formData;
 }
 
+function normalizeRestaurantPage(
+  data?: PageResponse<CuaHangVo> | null,
+  params?: Pick<RestaurantListParams, "page" | "size">,
+) {
+  return {
+    page: data?.page ?? params?.page ?? 0,
+    size: data?.size ?? params?.size ?? DEFAULT_PAGE_SIZE,
+    totalElements: data?.totalElements ?? 0,
+    totalPages: data?.totalPages ?? 0,
+    items: Array.isArray(data?.items)
+      ? data.items.map(normalizeRestaurant)
+      : [],
+  };
+}
+
 export const restaurantService = {
   getList: async (params?: RestaurantListParams) => {
     const response = await baseService.get<
       ApiResponse<PageResponse<CuaHangVo>>
     >(endpoints.restaurants, normalizeParams(params));
 
-    const data = response.data;
+    return normalizeRestaurantPage(response.data, params);
+  },
+  getRanking: async (params?: Pick<RestaurantListParams, "page" | "size">) => {
+    const response = await baseService.get<
+      ApiResponse<PageResponse<CuaHangVo>>
+    >(`${endpoints.restaurants}/ranking`, {
+      page: params?.page ?? 0,
+      size: params?.size ?? DEFAULT_PAGE_SIZE,
+    });
 
-    return {
-      page: data?.page ?? params?.page ?? 0,
-      size: data?.size ?? params?.size ?? DEFAULT_PAGE_SIZE,
-      totalElements: data?.totalElements ?? 0,
-      totalPages: data?.totalPages ?? 0,
-      items: Array.isArray(data?.items)
-        ? data.items.map(normalizeRestaurant)
-        : [],
-    };
+    return normalizeRestaurantPage(response.data, params);
   },
   getDetail: async (id: string) => {
     const response = await baseService.get<ApiResponse<CuaHangVo>>(
       `${endpoints.restaurants}/${id}`,
+    );
+
+    return normalizeRestaurant(response.data);
+  },
+  getByOwnerId: async (ownerId: string) => {
+    const response = await baseService.get<ApiResponse<CuaHangVo>>(
+      `${endpoints.restaurants}/owner/${ownerId}`,
+    );
+
+    return normalizeRestaurant(response.data);
+  },
+  getMyRestaurant: async () => {
+    const response = await baseService.get<ApiResponse<CuaHangVo>>(
+      `${endpoints.restaurants}/mine`,
     );
 
     return normalizeRestaurant(response.data);
@@ -185,12 +216,13 @@ export const restaurantService = {
     return response.data;
   },
   getMenuItems: async (restaurantId: string) => {
-    const response = await baseService.get<ApiResponse<MonAnVo[]>>(
+    const response = await baseService.get<ApiResponse<MonAnVo[]> | MonAnVo[]>(
       `${endpoints.restaurants}/${restaurantId}/menu-items`,
     );
+    const items = Array.isArray(response) ? response : response.data;
 
-    return Array.isArray(response.data)
-      ? response.data.map(normalizeMenuItem)
+    return Array.isArray(items)
+      ? items.map(normalizeMenuItem)
       : [];
   },
   createMenuItem: async (restaurantId: string, payload: MenuItemPayload) => {

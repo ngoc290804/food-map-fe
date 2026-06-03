@@ -248,7 +248,7 @@ function CuaHangListPage() {
         dismissLocationPrompt();
       },
       () => {
-        messageApi.warning("Không thể lấy vị trí. Bạn vẫn có thể sử dụng FoodMap bình thường.");
+        // messageApi.warning("Không thể lấy vị trí. Bạn vẫn có thể sử dụng FoodMap bình thường.");
         dismissLocationPrompt();
       },
       {

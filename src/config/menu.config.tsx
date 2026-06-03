@@ -9,6 +9,7 @@ import {
   HomeOutlined,
   SettingOutlined,
   ShopOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 
@@ -26,6 +27,7 @@ const categoryIcons: Record<FoodCategoryFilter, ReactNode> = {
   [FoodCategoryFilter.DRINK]: <AppstoreOutlined />,
   [FoodCategoryFilter.CAFE]: <CoffeeOutlined />,
   [FoodCategoryFilter.DESSERT_SNACK]: <GiftOutlined />,
+  [FoodCategoryFilter.RANKING]: <TrophyOutlined />,
   [FoodCategoryFilter.FAVORITE]: <HeartOutlined />,
 }
 
@@ -34,14 +36,19 @@ type CreateAppMenuItemsOptions = {
   roles?: string[]
 }
 
-function hasAdminRole(roles?: string[]) {
+function hasManagementRole(roles?: string[]) {
+  const adminRole = APP_AUTHORITIES.ADMIN.toLowerCase()
+  const storeOwnerRole = APP_AUTHORITIES.STORE_OWNER.toLowerCase()
+
   return (
     roles?.some((role) => {
       const normalizedRole = role.toLowerCase()
 
       return (
-        normalizedRole === APP_AUTHORITIES.ADMIN ||
-        normalizedRole === `role_${APP_AUTHORITIES.ADMIN}`
+        normalizedRole === adminRole ||
+        normalizedRole === `role_${adminRole}` ||
+        normalizedRole === storeOwnerRole ||
+        normalizedRole === `role_${storeOwnerRole}`
       )
     }) ?? false
   )
@@ -80,7 +87,7 @@ export function createAppMenuItems(
     })),
   ]
 
-  if (hasAdminRole(options.roles)) {
+  if (hasManagementRole(options.roles)) {
     items.push({
       key: '/quan-ly-quan-an',
       icon: <SettingOutlined />,

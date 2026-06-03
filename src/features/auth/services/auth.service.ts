@@ -9,8 +9,11 @@ export type UserInfoDto = {
   email: string
   fullName: string
   status?: string
+  loaiTaiKhoan?: AccountType
   roles?: string[]
 }
+
+export type AccountType = 'khach' | 'cuaHang'
 
 export type LoginPayload = {
   usernameOrEmail: string
@@ -23,6 +26,7 @@ export type RegisterPayload = {
   fullName: string
   password: string
   confirmPassword: string
+  phanQuyen: AccountType
 }
 
 export type LoginResponseDto = {
