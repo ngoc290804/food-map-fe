@@ -27,6 +27,8 @@ export type RestaurantListParams = {
 export type RestaurantPayload = {
   name: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   openTime: string;
   closeTime: string;
   description: string;
@@ -47,6 +49,18 @@ export type MenuItemPayload = {
   hinhAnh: string | null;
   imagePublicId?: string | null;
   conBan: boolean;
+};
+
+export type GeocodingResult = {
+  latitude: number;
+  longitude: number;
+  displayName: string;
+};
+
+type GeocodingResultVo = {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  displayName?: string | null;
 };
 
 function normalizeParams(params?: RestaurantListParams) {
@@ -104,11 +118,30 @@ function normalizeMenuItem(item?: MonAnVo | null): MenuItemDto {
   };
 }
 
+function normalizeGeocodingResult(item?: GeocodingResultVo | null) {
+  const latitude = normalizeCoordinate(item?.latitude);
+  const longitude = normalizeCoordinate(item?.longitude);
+
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return {
+    latitude,
+    longitude,
+    displayName: item?.displayName ?? "",
+  };
+}
+
 function buildRestaurantFormData(payload: RestaurantPayload) {
   const formData = new FormData();
 
   formData.append("tenQuanAn", payload.name);
   formData.append("diaChi", payload.address);
+  if (payload.latitude !== null && payload.longitude !== null) {
+    formData.append("latitude", String(payload.latitude));
+    formData.append("longitude", String(payload.longitude));
+  }
   formData.append("gioMoCua", payload.openTime);
   formData.append("gioDongCua", payload.closeTime);
   formData.append("moTa", payload.description);
@@ -187,6 +220,21 @@ export const restaurantService = {
     );
 
     return normalizeRestaurant(response.data);
+  },
+  geocodeAddress: async (address: string) => {
+    const response = await baseService.get<ApiResponse<GeocodingResultVo[]>>(
+      `${endpoints.restaurants}/geocode`,
+      {
+        address,
+        limit: 1,
+      },
+    );
+
+    return (
+      response.data
+        ?.map(normalizeGeocodingResult)
+        .find((item): item is GeocodingResult => item !== null) ?? null
+    );
   },
   create: async (payload: RestaurantPayload) => {
     const response = await baseService.post<ApiResponse<CuaHangVo>>(

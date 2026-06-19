@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -33,10 +33,13 @@ import {
 import type { TableProps, UploadProps } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import type { LeafletEvent, LeafletMouseEvent, Marker as LeafletMarker } from "leaflet";
+import "leaflet/dist/leaflet.css";
 import Gallery, {
   type PhotoProps,
   type RenderImageProps,
 } from "react-photo-gallery";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
 import { APP_AUTHORITIES, DEFAULT_PAGE_SIZE } from "@/config/constants";
 import {
@@ -52,6 +55,7 @@ import {
   type RestaurantPayload,
 } from "@/features/restaurant/services/restaurant.service";
 import type { RestaurantDto } from "@/features/restaurant/types/restaurant.dto";
+import { useDebounce } from "@/hooks/useDebounce";
 import { uploadService } from "@/services/upload/upload.service";
 
 type MenuManagePhoto = PhotoProps<{
@@ -75,6 +79,8 @@ type RestaurantManageItem = {
   ownerId: string | null;
   name: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   description: string;
   imageUrl: string | null;
   imagePublicId: string | null;
@@ -89,6 +95,8 @@ type RestaurantManageItem = {
 type RestaurantFormValues = {
   name: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string;
   imageUrl?: string;
   imagePublicId?: string | null;
@@ -110,6 +118,11 @@ type MenuFormValues = {
 };
 
 const emptyRestaurants: RestaurantManageItem[] = [];
+type MapPosition = [number, number];
+
+const defaultRestaurantPosition: MapPosition = [10.7769, 106.7009];
+const defaultRestaurantMapZoom = 16;
+const selectedRestaurantMapZoom = 17;
 
 function createEmptyRestaurant(): RestaurantManageItem {
   const detail = getCategoryDetailOptions(FoodCategoryFilter.RESTAURANT)[0];
@@ -119,6 +132,8 @@ function createEmptyRestaurant(): RestaurantManageItem {
     ownerId: null,
     name: "",
     address: "",
+    latitude: null,
+    longitude: null,
     description: "",
     imageUrl: null,
     imagePublicId: null,
@@ -141,6 +156,20 @@ function timeToDayjs(value?: string) {
 
 function formatTime(value?: Dayjs) {
   return value ? value.format("HH:mm") : "";
+}
+
+function normalizeFormCoordinate(value?: number | string | null) {
+  const coordinate = Number(value);
+
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function isValidRestaurantPosition(latitude?: number | null, longitude?: number | null) {
+  if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+    return false;
+  }
+
+  return Math.abs(latitude) > 0.01 || Math.abs(longitude) > 0.01;
 }
 
 function readFileAsDataUrl(file: File) {
@@ -196,6 +225,116 @@ function getManageableDetail(
     : (detailOptions[0]?.value ?? FoodDetailFilter.BUN_PHO);
 }
 
+function RestaurantMapCenter({ position }: { position: MapPosition }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(position, selectedRestaurantMapZoom);
+  }, [map, position]);
+
+  return null;
+}
+
+function RestaurantMapSizeFixer() {
+  const map = useMap();
+
+  useEffect(() => {
+    const invalidateMapSize = () => map.invalidateSize();
+    const container = map.getContainer();
+    const resizeObserver = new ResizeObserver(invalidateMapSize);
+    const timeoutId = window.setTimeout(invalidateMapSize, 250);
+
+    resizeObserver.observe(container);
+    invalidateMapSize();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [map]);
+
+  return null;
+}
+
+function RestaurantLocationPicker({
+  latitude,
+  longitude,
+  onChange,
+}: {
+  latitude?: number | null;
+  longitude?: number | null;
+  onChange: (position: MapPosition) => void;
+}) {
+  const selectedPosition =
+    isValidRestaurantPosition(latitude, longitude)
+      ? ([latitude, longitude] as MapPosition)
+      : null;
+  const center = selectedPosition ?? defaultRestaurantPosition;
+
+  const handleChange = useCallback(
+    (position: MapPosition) => {
+      onChange([
+        Number(position[0].toFixed(7)),
+        Number(position[1].toFixed(7)),
+      ]);
+    },
+    [onChange],
+  );
+
+  function MapClickHandler() {
+    useMapEvents({
+      click(event: LeafletMouseEvent) {
+        handleChange([event.latlng.lat, event.latlng.lng]);
+      },
+    });
+
+    return null;
+  }
+
+  return (
+    <div className="restaurant-management__location-picker">
+      <MapContainer
+        center={center}
+        className="restaurant-management__location-map"
+        zoom={selectedPosition ? selectedRestaurantMapZoom : defaultRestaurantMapZoom}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          maxZoom={19}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <RestaurantMapSizeFixer />
+        <MapClickHandler />
+        {selectedPosition ? (
+          <>
+            <RestaurantMapCenter position={selectedPosition} />
+            <Marker
+              draggable
+              position={selectedPosition}
+              eventHandlers={{
+                dragend: (event: LeafletEvent) => {
+                  const marker = event.target as LeafletMarker;
+                  const position = marker.getLatLng();
+
+                  handleChange([position.lat, position.lng]);
+                },
+              }}
+            />
+          </>
+        ) : null}
+      </MapContainer>
+      <Typography.Text
+        className="restaurant-management__location-help"
+        type={selectedPosition ? "secondary" : "danger"}
+      >
+        {selectedPosition
+          ? `Tọa độ đã chọn: ${selectedPosition[0].toFixed(7)}, ${selectedPosition[1].toFixed(7)}`
+          : "Bấm vào bản đồ để chọn vị trí chính xác của quán."}
+      </Typography.Text>
+    </div>
+  );
+}
+
 function mapRestaurantDtoToManageItem(
   item: RestaurantDto,
 ): RestaurantManageItem {
@@ -206,6 +345,8 @@ function mapRestaurantDtoToManageItem(
     ownerId: item.ownerId,
     name: item.name,
     address: item.address,
+    latitude: item.latitude,
+    longitude: item.longitude,
     description: item.description,
     imageUrl: item.imageUrl,
     imagePublicId: item.imagePublicId,
@@ -229,6 +370,8 @@ function buildRestaurantPayload(
   return {
     name: values.name,
     address: values.address,
+    latitude: normalizeFormCoordinate(values.latitude),
+    longitude: normalizeFormCoordinate(values.longitude),
     openTime: formatTime(values.openTime),
     closeTime: formatTime(values.closeTime),
     description: values.description ?? "",
@@ -261,6 +404,8 @@ function getRestaurantFormValues(item: RestaurantManageItem): RestaurantFormValu
   return {
     name: item.name,
     address: item.address,
+    latitude: item.latitude,
+    longitude: item.longitude,
     description: item.description,
     imageUrl: item.imageUrl ?? "",
     imagePublicId: item.imagePublicId,
@@ -351,8 +496,32 @@ function QuanLyCuaHangPage() {
     Form.useWatch("category", restaurantForm) ??
     selectedRestaurant?.category ??
     FoodCategoryFilter.RESTAURANT;
+  const selectedAddress = Form.useWatch("address", restaurantForm)?.trim() ?? "";
+  const debouncedAddress = useDebounce(selectedAddress, 650);
+  const selectedLatitude = Form.useWatch("latitude", restaurantForm);
+  const selectedLongitude = Form.useWatch("longitude", restaurantForm);
   const imageUrlPreview = Form.useWatch("imageUrl", restaurantForm)?.trim();
   const detailOptions = getCategoryDetailOptions(selectedCategory);
+  const normalizedSelectedLatitude = normalizeFormCoordinate(selectedLatitude);
+  const normalizedSelectedLongitude = normalizeFormCoordinate(selectedLongitude);
+  const shouldAutoGeocodeAddress =
+    debouncedAddress.length >= 3 &&
+    (isCreatingRestaurant ||
+      !isValidRestaurantPosition(
+        normalizedSelectedLatitude,
+        normalizedSelectedLongitude,
+      ) ||
+      debouncedAddress !== (selectedRestaurant?.address?.trim() ?? ""));
+  const [lastAutoGeocodedAddress, setLastAutoGeocodedAddress] = useState("");
+  const {
+    data: autoGeocodedLocation,
+    isFetching: isAutoGeocodingAddress,
+  } = useQuery({
+    enabled: shouldAutoGeocodeAddress,
+    queryKey: ["restaurant-geocode", debouncedAddress],
+    queryFn: () => restaurantService.geocodeAddress(debouncedAddress),
+    staleTime: 5 * 60 * 1000,
+  });
   const createRestaurantMutation = useMutation({
     mutationFn: (payload: RestaurantPayload) =>
       restaurantService.create(payload),
@@ -448,6 +617,34 @@ function QuanLyCuaHangPage() {
       image.src = item.imageUrl;
     });
   }, [menuImageSizes, selectedMenuImages]);
+
+  useEffect(() => {
+    setLastAutoGeocodedAddress("");
+  }, [isCreatingRestaurant, selectedRestaurantId]);
+
+  useEffect(() => {
+    if (
+      !autoGeocodedLocation ||
+      !shouldAutoGeocodeAddress ||
+      debouncedAddress !== selectedAddress ||
+      lastAutoGeocodedAddress === debouncedAddress
+    ) {
+      return;
+    }
+
+    restaurantForm.setFieldsValue({
+      latitude: autoGeocodedLocation.latitude,
+      longitude: autoGeocodedLocation.longitude,
+    });
+    setLastAutoGeocodedAddress(debouncedAddress);
+  }, [
+    autoGeocodedLocation,
+    debouncedAddress,
+    lastAutoGeocodedAddress,
+    restaurantForm,
+    selectedAddress,
+    shouldAutoGeocodeAddress,
+  ]);
 
   useEffect(() => {
     if (menuItemsError) {
@@ -775,6 +972,13 @@ function QuanLyCuaHangPage() {
     setRestaurantImageFile(null);
   };
 
+  const selectRestaurantLocation = useCallback(
+    ([latitude, longitude]: MapPosition) => {
+      restaurantForm.setFieldsValue({ latitude, longitude });
+    },
+    [restaurantForm],
+  );
+
   const openCreateMenuModal = () => {
     setEditingMenuId(null);
     menuForm.resetFields();
@@ -995,6 +1199,36 @@ function QuanLyCuaHangPage() {
           rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
         >
           <Input placeholder="Nhập địa chỉ" />
+        </Form.Item>
+        {isAutoGeocodingAddress ? (
+          <Typography.Text type="secondary">
+            Đang tính tọa độ từ địa chỉ...
+          </Typography.Text>
+        ) : null}
+        <Form.Item
+          hidden
+          name="latitude"
+          rules={[
+            { required: true, message: "Vui lòng chọn vị trí quán trên bản đồ" },
+          ]}
+        >
+          <InputNumber />
+        </Form.Item>
+        <Form.Item
+          hidden
+          name="longitude"
+          rules={[
+            { required: true, message: "Vui lòng chọn vị trí quán trên bản đồ" },
+          ]}
+        >
+          <InputNumber />
+        </Form.Item>
+        <Form.Item label="Vị trí trên bản đồ" required>
+          <RestaurantLocationPicker
+            latitude={normalizeFormCoordinate(selectedLatitude)}
+            longitude={normalizeFormCoordinate(selectedLongitude)}
+            onChange={selectRestaurantLocation}
+          />
         </Form.Item>
         <Form.Item label="Mô tả" name="description">
           <Input.TextArea placeholder="Nhập mô tả ngắn" rows={3} />
@@ -1296,6 +1530,36 @@ function QuanLyCuaHangPage() {
                   rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
                 >
                   <Input placeholder="Nhập địa chỉ" />
+                </Form.Item>
+                {isAutoGeocodingAddress ? (
+                  <Typography.Text type="secondary">
+                    Đang tính tọa độ từ địa chỉ...
+                  </Typography.Text>
+                ) : null}
+                <Form.Item
+                  hidden
+                  name="latitude"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn vị trí quán trên bản đồ" },
+                  ]}
+                >
+                  <InputNumber />
+                </Form.Item>
+                <Form.Item
+                  hidden
+                  name="longitude"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn vị trí quán trên bản đồ" },
+                  ]}
+                >
+                  <InputNumber />
+                </Form.Item>
+                <Form.Item label="Vị trí trên bản đồ" required>
+                  <RestaurantLocationPicker
+                    latitude={normalizeFormCoordinate(selectedLatitude)}
+                    longitude={normalizeFormCoordinate(selectedLongitude)}
+                    onChange={selectRestaurantLocation}
+                  />
                 </Form.Item>
                 <Form.Item label="Mô tả" name="description">
                   <Input.TextArea placeholder="Nhập mô tả ngắn" rows={3} />

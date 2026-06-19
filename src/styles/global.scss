@@ -621,6 +621,23 @@ body {
   margin-top: 1rem;
 }
 
+.restaurant-management__location-picker {
+  width: 100%;
+}
+
+.restaurant-management__location-map {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  height: 320px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.restaurant-management__location-help {
+  display: block;
+  margin-top: 0.5rem;
+}
+
 .restaurant-detail__info-card {
   padding-bottom: 3.25rem;
   position: relative;
@@ -951,6 +968,10 @@ body {
 
   .restaurant-detail__map {
     height: 360px;
+  }
+
+  .restaurant-management__location-map {
+    height: 280px;
   }
 
   .main-layout__header-shell {

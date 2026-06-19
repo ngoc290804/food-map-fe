@@ -1,5 +1,7 @@
 import { STORAGE_KEY } from '@/config/storage-key'
 
+const USER_LOCATION_TTL_MS = 30 * 60 * 1000
+
 export type UserSessionLocation = {
   accuracy: number | null
   capturedAt: string
@@ -31,7 +33,16 @@ export function getUserSessionLocation() {
   }
 
   try {
-    return JSON.parse(rawValue) as UserSessionLocation
+    const location = JSON.parse(rawValue) as UserSessionLocation
+    const capturedAt = new Date(location.capturedAt).getTime()
+
+    if (!Number.isFinite(capturedAt) || Date.now() - capturedAt > USER_LOCATION_TTL_MS) {
+      sessionStorage.removeItem(STORAGE_KEY.USER_LOCATION)
+
+      return null
+    }
+
+    return location
   } catch {
     sessionStorage.removeItem(STORAGE_KEY.USER_LOCATION)
 

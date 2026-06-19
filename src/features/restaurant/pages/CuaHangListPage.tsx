@@ -12,7 +12,7 @@ import {
   StarFilled,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Flex, Input, Space, Typography, message } from "antd";
+import { Alert, Button, Flex, Input, Modal, Space, Typography, message } from "antd";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import TheTrangThai from "@/components/common/TheTrangThai";
@@ -34,9 +34,7 @@ import {
 import { useRestaurantList } from "@/features/restaurant/hooks/useRestaurantList";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
-  clearLocationPromptPending,
   getUserSessionLocation,
-  hasLocationPromptPending,
   saveUserSessionLocation,
   type UserSessionLocation,
 } from "@/utils/session-location";
@@ -49,15 +47,19 @@ function CuaHangListPage() {
   const [messageApi, messageContextHolder] = message.useMessage();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState("");
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [userLocation, setUserLocation] = useState<UserSessionLocation | null>(
     () => getUserSessionLocation(),
   );
+  const [showLocationPrompt, setShowLocationPrompt] = useState(
+    () => getUserSessionLocation() === null,
+  );
+  const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [restaurantDistances, setRestaurantDistances] = useState<
     Record<string, RouteDistance>
   >({});
   const requestedDistanceIds = useRef(new Set<string>());
   const debouncedKeyword = useDebounce(keyword);
+  const autoRequestedLocationRef = useRef(true);
   const currentCategory = getFoodFilterByPath(location.pathname);
   const isHomePage = currentCategory.value === FoodCategoryFilter.HOME;
   const currentDetail = currentCategory.children?.find(
@@ -76,10 +78,6 @@ function CuaHangListPage() {
     ? `${currentCategory.label} - ${currentDetail.label} tại ${currentArea.label}.`
     : `${currentCategory.description} Khu vực: ${currentArea.label}.`;
   const items = data?.items ?? [];
-
-  useEffect(() => {
-    setShowLocationPrompt(isHomePage && hasLocationPromptPending());
-  }, [isHomePage]);
 
   useEffect(() => {
     if (!userLocation || items.length === 0) {
@@ -219,18 +217,19 @@ function CuaHangListPage() {
   };
 
   const dismissLocationPrompt = () => {
-    clearLocationPromptPending();
     setShowLocationPrompt(false);
   };
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
       messageApi.warning("Trình duyệt không hỗ trợ lấy vị trí.");
-      dismissLocationPrompt();
-
       return;
     }
 
+    setIsRequestingLocation(true);
+    window.setTimeout(() => {
+      setIsRequestingLocation(false);
+    }, 11_000);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const nextLocation = {
@@ -244,12 +243,14 @@ function CuaHangListPage() {
 
         saveUserSessionLocation(nextLocation);
         setUserLocation(nextLocation);
-        messageApi.success("Đã lưu vị trí tạm thời trong phiên đăng nhập.");
+        setRestaurantDistances({});
+        requestedDistanceIds.current.clear();
+        setIsRequestingLocation(false);
         dismissLocationPrompt();
+        messageApi.success("Đã lưu vị trí tạm thời trong phiên đăng nhập.");
       },
       () => {
         // messageApi.warning("Không thể lấy vị trí. Bạn vẫn có thể sử dụng FoodMap bình thường.");
-        dismissLocationPrompt();
       },
       {
         enableHighAccuracy: true,
@@ -259,10 +260,32 @@ function CuaHangListPage() {
     );
   };
 
+  useEffect(() => {
+    if (autoRequestedLocationRef.current) {
+      return;
+    }
+
+    autoRequestedLocationRef.current = true;
+    requestLocation();
+  }, []);
+
   return (
     <Space direction="vertical" size={28} style={{ width: "100%" }}>
       {messageContextHolder}
-      {showLocationPrompt ? (
+      <Modal
+        cancelText="Không chia sẻ"
+        confirmLoading={isRequestingLocation}
+        okText="Chia sẻ vị trí"
+        open={showLocationPrompt}
+        title="Chia sẻ vị trí của bạn?"
+        onCancel={dismissLocationPrompt}
+        onOk={requestLocation}
+      >
+        <Typography.Paragraph>
+          FoodMap có thể dùng vị trí hiện tại để tính khoảng cách đến các quán ăn gần bạn.
+        </Typography.Paragraph>
+      </Modal>
+      {false && showLocationPrompt ? (
         <Alert
           action={
             <Space size={8}>
