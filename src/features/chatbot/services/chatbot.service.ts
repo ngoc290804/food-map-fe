@@ -24,11 +24,20 @@ export type ChatHistoryItem = {
   createdAt: string;
 };
 
+export type ChatbotAskLocation = {
+  latitude: number;
+  longitude: number;
+};
+
 export const chatbotService = {
-  ask: async (question: string) => {
+  ask: async (question: string, location?: ChatbotAskLocation | null) => {
     const response = await baseService.post<ApiResponse<ChatbotAskResponse>>(
       `${endpoints.chatbot}/ask`,
-      { question },
+      {
+        question,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+      },
       {
         skipAuthRedirect: true,
       },

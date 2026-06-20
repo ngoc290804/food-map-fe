@@ -12,7 +12,7 @@ import {
   StarFilled,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Flex, Input, Modal, Space, Typography, message } from "antd";
+import { Button, Flex, Input, Space, Typography, message } from "antd";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import TheTrangThai from "@/components/common/TheTrangThai";
@@ -50,16 +50,13 @@ function CuaHangListPage() {
   const [userLocation, setUserLocation] = useState<UserSessionLocation | null>(
     () => getUserSessionLocation(),
   );
-  const [showLocationPrompt, setShowLocationPrompt] = useState(
-    () => getUserSessionLocation() === null,
-  );
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [restaurantDistances, setRestaurantDistances] = useState<
     Record<string, RouteDistance>
   >({});
   const requestedDistanceIds = useRef(new Set<string>());
+  const locationRequestIdRef = useRef(0);
   const debouncedKeyword = useDebounce(keyword);
-  const autoRequestedLocationRef = useRef(true);
   const currentCategory = getFoodFilterByPath(location.pathname);
   const isHomePage = currentCategory.value === FoodCategoryFilter.HOME;
   const currentDetail = currentCategory.children?.find(
@@ -216,22 +213,29 @@ function CuaHangListPage() {
     favoriteMutation.mutate({ favorite, restaurantId });
   };
 
-  const dismissLocationPrompt = () => {
-    setShowLocationPrompt(false);
-  };
-
   const requestLocation = () => {
+    if (isRequestingLocation) {
+      return;
+    }
+
+    const requestId = locationRequestIdRef.current + 1;
+    locationRequestIdRef.current = requestId;
+
     if (!navigator.geolocation) {
-      messageApi.warning("Trình duyệt không hỗ trợ lấy vị trí.");
+      messageApi.warning({
+        content: "Trình duyệt không hỗ trợ lấy vị trí.",
+        key: "user-location",
+      });
       return;
     }
 
     setIsRequestingLocation(true);
-    window.setTimeout(() => {
-      setIsRequestingLocation(false);
-    }, 11_000);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (locationRequestIdRef.current !== requestId) {
+          return;
+        }
+
         const nextLocation = {
           accuracy: Number.isFinite(position.coords.accuracy)
             ? position.coords.accuracy
@@ -246,11 +250,30 @@ function CuaHangListPage() {
         setRestaurantDistances({});
         requestedDistanceIds.current.clear();
         setIsRequestingLocation(false);
-        dismissLocationPrompt();
-        messageApi.success("Đã lưu vị trí tạm thời trong phiên đăng nhập.");
+        messageApi.success({
+          content: "Đã lưu vị trí tạm thời trong phiên đăng nhập.",
+          key: "user-location",
+        });
       },
-      () => {
-        // messageApi.warning("Không thể lấy vị trí. Bạn vẫn có thể sử dụng FoodMap bình thường.");
+      (error) => {
+        if (locationRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setIsRequestingLocation(false);
+
+        if (error.code === error.PERMISSION_DENIED) {
+          messageApi.warning({
+            content: "Bạn đã từ chối chia sẻ vị trí trên trình duyệt.",
+            key: "user-location",
+          });
+          return;
+        }
+
+        messageApi.warning({
+          content: "Không thể lấy vị trí hiện tại. Vui lòng thử lại.",
+          key: "user-location",
+        });
       },
       {
         enableHighAccuracy: true,
@@ -260,51 +283,9 @@ function CuaHangListPage() {
     );
   };
 
-  useEffect(() => {
-    if (autoRequestedLocationRef.current) {
-      return;
-    }
-
-    autoRequestedLocationRef.current = true;
-    requestLocation();
-  }, []);
-
   return (
     <Space direction="vertical" size={28} style={{ width: "100%" }}>
       {messageContextHolder}
-      <Modal
-        cancelText="Không chia sẻ"
-        confirmLoading={isRequestingLocation}
-        okText="Chia sẻ vị trí"
-        open={showLocationPrompt}
-        title="Chia sẻ vị trí của bạn?"
-        onCancel={dismissLocationPrompt}
-        onOk={requestLocation}
-      >
-        <Typography.Paragraph>
-          FoodMap có thể dùng vị trí hiện tại để tính khoảng cách đến các quán ăn gần bạn.
-        </Typography.Paragraph>
-      </Modal>
-      {false && showLocationPrompt ? (
-        <Alert
-          action={
-            <Space size={8}>
-              <Button size="small" onClick={dismissLocationPrompt}>
-                Không chia sẻ
-              </Button>
-              <Button size="small" type="primary" onClick={requestLocation}>
-                Chia sẻ vị trí
-              </Button>
-            </Space>
-          }
-          closable
-          description="FoodMap có thể dùng vị trí hiện tại để gợi ý quán ăn gần bạn trong phiên sử dụng này."
-          message="Bạn có muốn chia sẻ vị trí không?"
-          showIcon
-          type="info"
-          onClose={dismissLocationPrompt}
-        />
-      ) : null}
       <Flex align="center" justify="space-between" wrap="wrap">
         <div>
           <Typography.Title level={2} style={{ marginBottom: 6 }}>
@@ -312,9 +293,18 @@ function CuaHangListPage() {
           </Typography.Title>
           <Typography.Text type="secondary">{pageDescription}</Typography.Text>
         </div>
-        <Button className="offer-section__view-all" type="link">
-          Xem tất cả <RightOutlined />
-        </Button>
+        <Space wrap>
+          <Button
+            icon={<AimOutlined />}
+            loading={isRequestingLocation}
+            onClick={requestLocation}
+          >
+            {userLocation ? "Cập nhật vị trí" : "Dùng vị trí hiện tại"}
+          </Button>
+          <Button className="offer-section__view-all" type="link">
+            Xem tất cả <RightOutlined />
+          </Button>
+        </Space>
       </Flex>
 
       <Input

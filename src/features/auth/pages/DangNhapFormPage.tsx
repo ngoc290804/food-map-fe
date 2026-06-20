@@ -12,7 +12,6 @@ import type {
   LoginPayload,
   RegisterPayload,
 } from '@/features/auth/services/auth.service'
-import { markLocationPromptPending } from '@/utils/session-location'
 
 const accountTypeOptions: { label: string; value: RegisterPayload['phanQuyen'] }[] = [
   { label: 'Khách hàng', value: 'khach' },
@@ -39,7 +38,6 @@ function DangNhapFormPage() {
     try {
       setIsSubmitting(true)
       await signIn(values, { redirect: false })
-      markLocationPromptPending()
       messageApi.success('Đăng nhập thành công')
       navigate('/', { replace: true })
     } catch (error) {

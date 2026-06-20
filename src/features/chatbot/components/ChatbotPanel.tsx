@@ -7,8 +7,13 @@ import { useNavigate } from "react-router-dom";
 
 import {
   chatbotService,
+  type ChatbotAskLocation,
   type ChatbotRestaurantVo,
 } from "@/features/chatbot/services/chatbot.service";
+import {
+  getUserSessionLocation,
+  saveUserSessionLocation,
+} from "@/utils/session-location";
 
 type ChatMessage = {
   id: string;
@@ -49,6 +54,64 @@ function getChatbotErrorMessage(error: unknown) {
   return "Không thể kết nối chatbot. Vui lòng thử lại sau.";
 }
 
+function shouldAttachLocation(question: string) {
+  const normalizedQuestion = question.toLowerCase();
+
+  return (
+    normalizedQuestion.includes("gan toi") ||
+    normalizedQuestion.includes("gan nhat") ||
+    normalizedQuestion.includes("gần tôi") ||
+    normalizedQuestion.includes("gần nhất")
+  );
+}
+
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      maximumAge: 60_000,
+      timeout: 10_000,
+    });
+  });
+}
+
+async function getChatLocation(): Promise<ChatbotAskLocation | null> {
+  const cachedLocation = getUserSessionLocation();
+
+  if (cachedLocation) {
+    return {
+      latitude: cachedLocation.latitude,
+      longitude: cachedLocation.longitude,
+    };
+  }
+
+  try {
+    const position = await getCurrentPosition();
+    const location = {
+      accuracy: Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy
+        : null,
+      capturedAt: new Date().toISOString(),
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    };
+
+    saveUserSessionLocation(location);
+
+    return {
+      latitude: location.latitude,
+      longitude: location.longitude,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function ChatbotPanel() {
   const navigate = useNavigate();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -86,7 +149,10 @@ function ChatbotPanel() {
     ]);
 
     try {
-      const response = await chatbotService.ask(normalizedQuestion);
+      const location = shouldAttachLocation(normalizedQuestion)
+        ? await getChatLocation()
+        : null;
+      const response = await chatbotService.ask(normalizedQuestion, location);
 
       setMessages((current) => [
         ...current,

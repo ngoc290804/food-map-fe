@@ -13,18 +13,6 @@ export function saveUserSessionLocation(location: UserSessionLocation) {
   sessionStorage.setItem(STORAGE_KEY.USER_LOCATION, JSON.stringify(location))
 }
 
-export function markLocationPromptPending() {
-  sessionStorage.setItem(STORAGE_KEY.LOCATION_PROMPT_PENDING, 'true')
-}
-
-export function hasLocationPromptPending() {
-  return sessionStorage.getItem(STORAGE_KEY.LOCATION_PROMPT_PENDING) === 'true'
-}
-
-export function clearLocationPromptPending() {
-  sessionStorage.removeItem(STORAGE_KEY.LOCATION_PROMPT_PENDING)
-}
-
 export function getUserSessionLocation() {
   const rawValue = sessionStorage.getItem(STORAGE_KEY.USER_LOCATION)
 
@@ -55,6 +43,5 @@ export function clearUserSessionLocation() {
 }
 
 export function clearUserLocationSessionData() {
-  clearLocationPromptPending()
   clearUserSessionLocation()
 }
